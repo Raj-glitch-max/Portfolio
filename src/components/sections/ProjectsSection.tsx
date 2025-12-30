@@ -1,10 +1,11 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { useState, useEffect } from 'react';
-import { ExternalLink, Github, X } from 'lucide-react';
+import { Github, X } from 'lucide-react';
 import { PROJECTS } from '../../lib/constants';
 import type { Project } from '../../lib/types';
 import MermaidDiagram from '../MermaidDiagram';
 import ArchitectureAnimation from '../ArchitectureAnimation';
+import FloatingProjectCard from '../FloatingProjectCard';
 
 export default function ProjectsSection() {
     const [selectedProject, setSelectedProject] = useState<Project | null>(null);
@@ -38,105 +39,117 @@ export default function ProjectsSection() {
         return () => window.removeEventListener('keydown', handleEscape);
     }, [selectedProject]);
 
+    // Define card sizes for bento grid layout
+    const cardSizes: ('small' | 'medium' | 'large')[] = ['large', 'medium', 'small', 'small'];
+
     return (
         <>
             <motion.div
-                initial={{ opacity: 0, y: 50 }}
-                animate={{ opacity: 1, y: 0 }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
                 transition={{ duration: 0.5, ease: 'easeOut' }}
-                className="space-y-8"
+                className="relative min-h-screen"
             >
-                {/* Header */}
-                <div>
-                    <h2 className="font-terminal text-3xl md:text-4xl text-cyan-neon text-glow-cyan mb-4">
-                        Projects
-                    </h2>
-                    <p className="text-text-secondary">
-                        Highlighting key projects showcasing DevOps, cloud infrastructure, and automation expertise
-                    </p>
+                {/* Animated Background Orbs */}
+                <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                    {/* Cyan orb - top left */}
+                    <motion.div
+                        animate={{
+                            x: [0, 50, -30, 0],
+                            y: [0, -40, 20, 0],
+                            scale: [1, 1.2, 0.9, 1],
+                        }}
+                        transition={{
+                            duration: 20,
+                            repeat: Infinity,
+                            ease: 'easeInOut'
+                        }}
+                        className="
+                            absolute -top-32 -left-32
+                            w-[500px] h-[500px]
+                            bg-gradient-to-br from-cyan-neon/30 to-transparent
+                            rounded-full
+                            blur-3xl
+                            animate-liquid-morph
+                        "
+                    />
+
+                    {/* Magenta orb - bottom right */}
+                    <motion.div
+                        animate={{
+                            x: [0, -60, 40, 0],
+                            y: [0, 50, -30, 0],
+                            scale: [1, 1.3, 0.85, 1],
+                        }}
+                        transition={{
+                            duration: 25,
+                            repeat: Infinity,
+                            ease: 'easeInOut'
+                        }}
+                        className="
+                            absolute -bottom-32 -right-32
+                            w-[600px] h-[600px]
+                            bg-gradient-to-br from-magenta-neon/25 to-transparent
+                            rounded-full
+                            blur-3xl
+                            animate-liquid-morph
+                        "
+                        style={{ animationDelay: '2s' }}
+                    />
+
+                    {/* Yellow accent orb */}
+                    <motion.div
+                        animate={{
+                            x: [0, 30, -20, 0],
+                            y: [0, -30, 40, 0],
+                        }}
+                        transition={{
+                            duration: 18,
+                            repeat: Infinity,
+                            ease: 'easeInOut'
+                        }}
+                        className="
+                            absolute top-1/3 right-1/4
+                            w-[300px] h-[300px]
+                            bg-gradient-to-br from-yellow-neon/15 to-transparent
+                            rounded-full
+                            blur-3xl
+                        "
+                    />
                 </div>
 
-                {/* Project Cards Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {PROJECTS.map((project, index) => {
-                        const delay = index * 0.15;
+                {/* Content */}
+                <div className="relative z-10 space-y-10">
+                    {/* Header with glassmorphism */}
+                    <motion.div
+                        initial={{ opacity: 0, y: -30 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.6 }}
+                        className="text-center md:text-left"
+                    >
+                        <h2 className="font-terminal text-4xl md:text-5xl text-transparent bg-clip-text bg-gradient-to-r from-cyan-neon via-white to-magenta-neon mb-4">
+                            Projects
+                        </h2>
+                        <p className="text-text-secondary text-lg max-w-2xl">
+                            Showcasing DevOps expertise, cloud infrastructure mastery, and automation innovation
+                        </p>
+                    </motion.div>
 
-                        return (
-                            <motion.div
+                    {/* Bento Grid with Floating Cards */}
+                    <div
+                        className="bento-grid perspective-1500"
+                        style={{ perspective: '1500px' }}
+                    >
+                        {PROJECTS.map((project, index) => (
+                            <FloatingProjectCard
                                 key={project.name}
-                                initial={{ opacity: 0, y: 30, scale: 0.9 }}
-                                animate={{ opacity: 1, y: 0, scale: 1 }}
-                                transition={{ delay, duration: 0.4, ease: 'easeOut' }}
-                                whileHover={{
-                                    scale: 1.02,
-                                    y: -8,
-                                    boxShadow: '0 8px 24px rgba(0, 217, 255, 0.25)'
-                                }}
-                                className="bg-darker-gray border border-text-muted/30 rounded-xl overflow-hidden hover:border-cyan-neon transition-all duration-300 cursor-pointer"
+                                project={project}
+                                index={index}
                                 onClick={() => handleProjectClick(project)}
-                            >
-                                {/* Project Image/Gradient */}
-                                <div className="relative h-48 bg-gradient-to-br from-cyan-neon/20 via-magenta-neon/10 to-dark-gray overflow-hidden group">
-                                    <div className="absolute inset-0 flex items-center justify-center">
-                                        <div className="text-6xl opacity-30 group-hover:opacity-50 transition-opacity">
-                                            {project.icon || '🚀'}
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Project Content */}
-                                <div className="p-6 space-y-4">
-                                    {/* Title */}
-                                    <h3 className="text-white font-bold text-xl group-hover:text-cyan-neon transition-colors">
-                                        {project.name}
-                                    </h3>
-
-                                    {/* Short Description */}
-                                    <p className="text-text-secondary text-sm line-clamp-3 leading-relaxed">
-                                        {project.shortDescription}
-                                    </p>
-
-                                    {/* Tech Stack Badges */}
-                                    <div className="flex flex-wrap gap-2">
-                                        {project.techStack.slice(0, 5).map((tech) => (
-                                            <span
-                                                key={tech}
-                                                className="px-3 py-1 bg-cyan-neon/10 text-cyan-neon text-xs rounded-full border border-cyan-neon/30"
-                                            >
-                                                {tech}
-                                            </span>
-                                        ))}
-                                        {project.techStack.length > 5 && (
-                                            <span className="px-3 py-1 bg-text-muted/10 text-text-muted text-xs rounded-full">
-                                                +{project.techStack.length - 5} more
-                                            </span>
-                                        )}
-                                    </div>
-
-                                    {/* Buttons */}
-                                    <div className="flex gap-3 pt-2">
-                                        <a
-                                            href={project.githubUrl}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            onClick={(e) => e.stopPropagation()}
-                                            className="flex items-center gap-2 px-4 py-2 border border-cyan-neon/50 rounded-md hover:bg-cyan-neon/10 hover:border-cyan-neon transition-all text-cyan-neon text-sm"
-                                        >
-                                            <Github className="w-4 h-4" />
-                                            <span>GitHub</span>
-                                        </a>
-
-                                        <button
-                                            className="flex items-center gap-2 px-4 py-2 bg-cyan-neon/10 border border-cyan-neon rounded-md hover:bg-cyan-neon hover:text-deep-navy transition-all text-cyan-neon text-sm font-medium"
-                                        >
-                                            <span>View Details</span>
-                                            <ExternalLink className="w-4 h-4" />
-                                        </button>
-                                    </div>
-                                </div>
-                            </motion.div>
-                        );
-                    })}
+                                size={cardSizes[index] || 'small'}
+                            />
+                        ))}
+                    </div>
                 </div>
             </motion.div>
 
