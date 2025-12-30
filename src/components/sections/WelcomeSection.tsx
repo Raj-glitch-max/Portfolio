@@ -126,69 +126,74 @@ export default function WelcomeSection() {
                 );
             })}
 
-            {/* Orbit rings (decorative) */}
-            {orbits.map((orbit, idx) => (
-                <motion.div
-                    key={idx}
-                    initial={{ opacity: 0, scale: 0.8 }}
-                    animate={{ opacity: 0.15, scale: 1 }}
-                    transition={{ delay: idx * 0.2, duration: 0.8 }}
-                    className="absolute rounded-full border border-cyan-neon/30 hidden md:block"
-                    style={{
-                        width: orbit.radius * 2,
-                        height: orbit.radius * 2,
-                    }}
-                />
-            ))}
+            {/* Solar System Container - Scaled for mobile */}
+            <div className="absolute inset-0 flex items-center justify-center scale-[0.55] md:scale-100 transition-transform duration-500 pointer-events-none">
+                <div className="relative w-full h-full flex items-center justify-center">
+                    {/* Orbit rings (decorative) */}
+                    {orbits.map((orbit, idx) => (
+                        <motion.div
+                            key={idx}
+                            initial={{ opacity: 0, scale: 0.8 }}
+                            animate={{ opacity: 0.15, scale: 1 }}
+                            transition={{ delay: idx * 0.2, duration: 0.8 }}
+                            className="absolute rounded-full border border-cyan-neon/30"
+                            style={{
+                                width: orbit.radius * 2,
+                                height: orbit.radius * 2,
+                            }}
+                        />
+                    ))}
 
-            {/* Orbiting Tech Icons - Hidden on Mobile */}
-            {orbits.map((orbit, orbitIdx) => (
-                <motion.div
-                    key={orbitIdx}
-                    animate={{ rotate: 360 }}
-                    transition={{
-                        duration: orbit.duration,
-                        repeat: Infinity,
-                        ease: 'linear',
-                    }}
-                    className="absolute hidden md:block"
-                    style={{
-                        width: orbit.radius * 2,
-                        height: orbit.radius * 2,
-                    }}
-                >
-                    {orbit.icons.map((iconName, iconIdx) => {
-                        const angle = (iconIdx * 360) / orbit.icons.length;
-                        const x = Math.cos((angle * Math.PI) / 180) * orbit.radius;
-                        const y = Math.sin((angle * Math.PI) / 180) * orbit.radius;
-                        return (
-                            <motion.div
-                                key={iconName}
-                                initial={{ opacity: 0, rotate: 0 }}
-                                animate={{ opacity: 1, rotate: -360 }}
-                                transition={{
-                                    opacity: { delay: 0.5 + orbitIdx * 0.2 + iconIdx * 0.1, duration: 0.5 },
-                                    rotate: { duration: orbit.duration, repeat: Infinity, ease: 'linear' }
-                                }}
-                                className="absolute p-4 rounded-2xl bg-[rgba(22,27,34,0.9)] border border-white/10 backdrop-blur-md shadow-xl hover:border-cyan-neon/50 hover:scale-110 transition-all cursor-pointer group"
-                                style={{
-                                    left: `calc(50% + ${x}px - 32px)`,
-                                    top: `calc(50% + ${y}px - 32px)`,
-                                }}
-                                whileHover={{ scale: 1.2 }}
-                            >
-                                <div className="w-10 h-10 flex items-center justify-center">
-                                    <TechIcon name={iconName} color={orbit.colors[iconIdx]} />
-                                </div>
-                                {/* Tooltip */}
-                                <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity text-xs font-mono text-cyan-neon whitespace-nowrap bg-black/80 px-2 py-1 rounded">
-                                    {iconName}
-                                </div>
-                            </motion.div>
-                        );
-                    })}
-                </motion.div>
-            ))}
+                    {/* Orbiting Tech Icons */}
+                    {orbits.map((orbit, orbitIdx) => (
+                        <motion.div
+                            key={orbitIdx}
+                            animate={{ rotate: 360 }}
+                            transition={{
+                                duration: orbit.duration,
+                                repeat: Infinity,
+                                ease: 'linear',
+                            }}
+                            className="absolute"
+                            style={{
+                                width: orbit.radius * 2,
+                                height: orbit.radius * 2,
+                            }}
+                        >
+                            {orbit.icons.map((iconName, iconIdx) => {
+                                const angle = (iconIdx * 360) / orbit.icons.length;
+                                const x = Math.cos((angle * Math.PI) / 180) * orbit.radius;
+                                const y = Math.sin((angle * Math.PI) / 180) * orbit.radius;
+                                return (
+                                    <motion.div
+                                        key={iconName}
+                                        initial={{ opacity: 0, rotate: 0 }}
+                                        animate={{ opacity: 1, rotate: -360 }}
+                                        transition={{
+                                            opacity: { delay: 0.5 + orbitIdx * 0.2 + iconIdx * 0.1, duration: 0.5 },
+                                            rotate: { duration: orbit.duration, repeat: Infinity, ease: 'linear' }
+                                        }}
+                                        className="absolute p-4 rounded-2xl bg-[rgba(22,27,34,0.9)] border border-white/10 backdrop-blur-md shadow-xl hover:border-cyan-neon/50 hover:scale-110 transition-all cursor-pointer group pointer-events-auto"
+                                        style={{
+                                            left: `calc(50% + ${x}px - 32px)`,
+                                            top: `calc(50% + ${y}px - 32px)`,
+                                        }}
+                                        whileHover={{ scale: 1.2 }}
+                                    >
+                                        <div className="w-10 h-10 flex items-center justify-center">
+                                            <TechIcon name={iconName} color={orbit.colors[iconIdx]} />
+                                        </div>
+                                        {/* Tooltip */}
+                                        <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity text-xs font-mono text-cyan-neon whitespace-nowrap bg-black/80 px-2 py-1 rounded">
+                                            {iconName}
+                                        </div>
+                                    </motion.div>
+                                );
+                            })}
+                        </motion.div>
+                    ))}
+                </div>
+            </div>
 
             {/* Central Profile Card - 3D Interactive */}
             <motion.div

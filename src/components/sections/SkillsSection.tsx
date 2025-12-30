@@ -3,7 +3,7 @@ import { motion, useMotionValue, useSpring, useTransform } from 'framer-motion';
 import { useState, useRef } from 'react';
 
 // Tech stack icons as SVG components
-const TechIcons: Record<string, React.FC<{ className?: string }>> = {
+export const TechIcons: Record<string, React.FC<{ className?: string }>> = {
     // Cloud & Infrastructure
     'AWS': ({ className }) => (
         <svg className={className} viewBox="0 0 24 24" fill="currentColor">
@@ -350,6 +350,21 @@ export default function SkillsSection() {
                     Technical expertise across cloud, DevOps, and development
                 </p>
             </motion.div>
+
+            {/* Mobile Interaction Hint */}
+            <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 1 }}
+                className="md:hidden flex justify-center items-center gap-2 text-cyan-neon/60 text-xs font-mono mb-4"
+            >
+                <div className="w-4 h-4 rounded-full border border-cyan-neon/40 flex items-center justify-center animate-pulse">
+                    <div className="w-2 h-2 bg-cyan-neon/60 rounded-full" />
+                </div>
+                <span>Tap skills to explore</span>
+            </motion.div>
+
+
 
             {/* Skills Grid by Category */}
             <div className="relative z-10 space-y-8">

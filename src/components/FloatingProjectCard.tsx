@@ -251,8 +251,8 @@ export default function FloatingProjectCard({
                                 )}
                             </div>
 
-                            {/* Action buttons */}
-                            <div className="flex gap-3">
+                            {/* Action buttons - Always visible on mobile, hover on desktop */}
+                            <div className="flex gap-3 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-300">
                                 <motion.button
                                     whileHover={{ scale: 1.03 }}
                                     whileTap={{ scale: 0.97 }}
@@ -298,6 +298,13 @@ export default function FloatingProjectCard({
                                 >
                                     <Github className="w-5 h-5" />
                                 </motion.a>
+                            </div>
+
+                            {/* Mobile Tap Hint (Hand Icon) */}
+                            <div className="md:hidden absolute bottom-4 right-4 pointer-events-none opacity-50 animate-bounce">
+                                <div className="w-8 h-8 rounded-full bg-cyan-neon/20 flex items-center justify-center border border-cyan-neon/30">
+                                    <div className="w-2 h-2 bg-cyan-neon rounded-full" />
+                                </div>
                             </div>
                         </div>
                     </div>
