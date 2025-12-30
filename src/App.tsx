@@ -10,6 +10,7 @@ import SkillsSection from './components/sections/SkillsSection';
 import ProjectsSection from './components/sections/ProjectsSection';
 import BlogSection from './components/sections/BlogSection';
 import ContactSection from './components/sections/ContactSection';
+import WelcomeSection from './components/sections/WelcomeSection';
 
 function PortfolioContent() {
   const { isInitialized, currentSection } = useApp();
@@ -28,13 +29,7 @@ function PortfolioContent() {
       case 'contact':
         return <ContactSection />;
       default:
-        return (
-          <div className="flex items-center justify-center min-h-[400px]">
-            <p className="font-mono text-text-muted text-center">
-              Select a script from the sidebar to view content
-            </p>
-          </div>
-        );
+        return <WelcomeSection />;
     }
   };
 
