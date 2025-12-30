@@ -56,9 +56,22 @@ const orbits = [
     { radius: 320, icons: ['Git', 'PostgreSQL', 'Redis'], duration: 45, colors: ['#F05032', '#336791', '#DC382D'] },
 ];
 
+// Floating terminal commands
+const commands = [
+    "docker build -t app .",
+    "kubectl get pods",
+    "terraform apply",
+    "git commit -m 'feat: init'",
+    "npm run build",
+    "aws s3 ls",
+    "python3 main.py",
+    "cargo build --release"
+];
+
 export default function WelcomeSection() {
     const containerRef = useRef<HTMLDivElement>(null);
     const [isHovered, setIsHovered] = useState(false);
+    const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
 
     // Mouse tracking for profile card
     const mouseX = useMotionValue(0);
@@ -76,6 +89,7 @@ export default function WelcomeSection() {
         const y = (e.clientY - rect.top - rect.height / 2) / rect.height;
         mouseX.set(x);
         mouseY.set(y);
+        setMousePos({ x: e.clientX - rect.left, y: e.clientY - rect.top });
     };
 
     const handleMouseLeave = () => {
@@ -90,8 +104,53 @@ export default function WelcomeSection() {
             onMouseMove={handleMouseMove}
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={handleMouseLeave}
-            className="relative flex items-center justify-center min-h-[85vh]"
+            className="relative flex items-center justify-center min-h-[85vh] overflow-hidden"
         >
+            {/* Interactive Grid Background */}
+            <div className="absolute inset-0 pointer-events-none">
+                <svg className="w-full h-full opacity-20">
+                    <defs>
+                        <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+                            <circle cx="1" cy="1" r="1" fill="rgba(0, 217, 255, 0.5)" />
+                        </pattern>
+                        <radialGradient id="maskGradient" cx="50%" cy="50%" r="50%" fx="50%" fy="50%">
+                            <stop offset="0%" stopColor="white" stopOpacity="1" />
+                            <stop offset="100%" stopColor="transparent" stopOpacity="0" />
+                        </radialGradient>
+                        <mask id="mask">
+                            <circle cx={mousePos.x} cy={mousePos.y} r="300" fill="url(#maskGradient)" />
+                        </mask>
+                    </defs>
+                    <rect width="100%" height="100%" fill="url(#grid)" mask="url(#mask)" />
+                </svg>
+            </div>
+
+            {/* Floating Terminal Commands */}
+            {commands.map((cmd, i) => (
+                <motion.div
+                    key={i}
+                    initial={{ opacity: 0, x: Math.random() * 100 - 50, y: Math.random() * 100 - 50 }}
+                    animate={{
+                        opacity: [0, 0.4, 0],
+                        x: [Math.random() * 200 - 100, Math.random() * 200 - 100],
+                        y: [Math.random() * 200 - 100, Math.random() * 200 - 100],
+                    }}
+                    transition={{
+                        duration: 10 + Math.random() * 10,
+                        repeat: Infinity,
+                        delay: i * 2,
+                        ease: "linear"
+                    }}
+                    className="absolute font-mono text-xs text-cyan-neon/30 pointer-events-none whitespace-nowrap"
+                    style={{
+                        left: `${10 + Math.random() * 80}%`,
+                        top: `${10 + Math.random() * 80}%`,
+                    }}
+                >
+                    $ {cmd}
+                </motion.div>
+            ))}
+
             {/* Orbit rings (decorative) */}
             {orbits.map((orbit, idx) => (
                 <motion.div
@@ -136,15 +195,19 @@ export default function WelcomeSection() {
                                     opacity: { delay: 0.5 + orbitIdx * 0.2 + iconIdx * 0.1, duration: 0.5 },
                                     rotate: { duration: orbit.duration, repeat: Infinity, ease: 'linear' }
                                 }}
-                                className="absolute p-3 rounded-xl bg-[rgba(22,27,34,0.8)] border border-white/10 backdrop-blur-sm shadow-lg hover:border-cyan-neon/50 hover:scale-110 transition-all cursor-pointer"
+                                className="absolute p-4 rounded-2xl bg-[rgba(22,27,34,0.9)] border border-white/10 backdrop-blur-md shadow-xl hover:border-cyan-neon/50 hover:scale-110 transition-all cursor-pointer group"
                                 style={{
-                                    left: `calc(50% + ${x}px - 24px)`,
-                                    top: `calc(50% + ${y}px - 24px)`,
+                                    left: `calc(50% + ${x}px - 32px)`,
+                                    top: `calc(50% + ${y}px - 32px)`,
                                 }}
                                 whileHover={{ scale: 1.2 }}
                             >
-                                <div className="w-8 h-8 flex items-center justify-center">
+                                <div className="w-10 h-10 flex items-center justify-center">
                                     <TechIcon name={iconName} color={orbit.colors[iconIdx]} />
+                                </div>
+                                {/* Tooltip */}
+                                <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity text-xs font-mono text-cyan-neon whitespace-nowrap bg-black/80 px-2 py-1 rounded">
+                                    {iconName}
                                 </div>
                             </motion.div>
                         );
@@ -181,7 +244,7 @@ export default function WelcomeSection() {
                         backdrop-blur-xl
                         border border-cyan-neon/30
                         shadow-[0_20px_60px_rgba(0,0,0,0.5)]
-                        min-w-[320px]
+                        min-w-[340px]
                     "
                     style={{ transform: 'translateZ(30px)' }}
                 >
