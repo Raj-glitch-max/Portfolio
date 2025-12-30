@@ -417,3 +417,42 @@ body {
 .shimmer:hover::after {
   animation: shimmer 0.8s ease-out;
 }
+/* ═══════════════════════════════════════════════════════════════════════════ */
+/* TEXT SELECTION STYLES                                                        */
+/* ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Default text selection */
+::selection {
+  background-color: rgba(0, 217, 255, 0.4);
+  color: #ffffff;
+  text-shadow: none;
+}
+
+::-moz-selection {
+  background-color: rgba(0, 217, 255, 0.4);
+  color: #ffffff;
+  text-shadow: none;
+}
+
+/* For links specifically */
+a::selection {
+  background-color: rgba(0, 217, 255, 0.5);
+  color: #ffffff;
+}
+
+/* For code blocks */
+code::selection {
+  background-color: rgba(0, 217, 255, 0.3);
+  color: #00d9ff;
+}
+
+/* Text selection styling */
+::selection {
+  background-color: rgba(0, 217, 255, 0.4);
+  color: #ffffff;
+}
+
+::-moz-selection {
+  background-color: rgba(0, 217, 255, 0.4);
+  color: #ffffff;
+}

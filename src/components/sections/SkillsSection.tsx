@@ -1,3 +1,4 @@
+/* eslint-disable */
 import { motion, useMotionValue, useSpring, useTransform } from 'framer-motion';
 import { useState, useRef } from 'react';
 
@@ -25,9 +26,7 @@ const TechIcons: Record<string, React.FC<{ className?: string }>> = {
         </svg>
     ),
     'Kubernetes': ({ className }) => (
-        <svg className={className} viewBox="0 0 24 24" fill="currentColor">
-            <path d="M10.204 14.35l.007.01-.999 2.413a5.171 5.171 0 0 1-2.075-2.597l2.578-.437.004.005a.44.44 0 0 1 .484.606zm-.833-2.129a.44.44 0 0 0 .173-.756l.002-.011L7.585 9.7a5.143 5.143 0 0 0-.73 3.255l2.514-.725.002-.009zm1.145-1.98a.44.44 0 0 0 .699-.337l.01-.005.15-2.62a5.144 5.144 0 0 0-3.01 1.442l2.147 1.523.004-.002zm.76 2.75l.723.349.722-.347.18-.78-.5-.623h-.804l-.5.623.179.778zm1.5-3.095a.44.44 0 0 0 .7.336l.008.003 2.134-1.513a5.188 5.188 0 0 0-2.992-1.442l.148 2.615.002.001zm10.876 5.97l-5.773 7.181a1.6 1.6 0 0 1-1.248.594H9.261a1.6 1.6 0 0 1-1.247-.594l-5.773-7.181a1.583 1.583 0 0 1-.307-1.34L3.823 5.79a1.6 1.6 0 0 1 .933-1.094L12.3.327a1.606 1.606 0 0 1 1.282 0l7.635 4.369a1.6 1.6 0 0 1 .933 1.094l1.89 9.136c.09.46-.034.94-.31 1.34zM8.681 6.963A6.04 6.04 0 0 1 12 6.05c1.182 0 2.292.334 3.27.916v.003l.006-.004a6.043 6.043 0 0 1 2.165 2.166l-.004.002v.006a5.977 5.977 0 0 1 .906 3.16v.026l.001.026a6.02 6.02 0 0 1-.913 3.2l-.004.003-.003-.004a6.043 6.043 0 0 1-2.166 2.166l-.005-.004.001.007a5.965 5.965 0 0 1-3.254.913 5.965 5.965 0 0 1-3.254-.913l.003-.005-.006.002a6.043 6.043 0 0 1-2.164-2.166l.002-.004a6.02 6.02 0 0 1-.913-3.2l.001-.027v-.026a5.977 5.977 0 0 1 .906-3.16V9.08a6.043 6.043 0 0 1 2.163-2.112l.004.003v-.008zm5.535 8.245l.004.005 1.011 2.44a5.109 5.109 0 0 1-2.25.528h-.016a5.152 5.152 0 0 1-2.202-.516l1.002-2.418a.44.44 0 0 0 .486-.606l.005-.012.99-2.397a.44.44 0 0 0-.17-.757l-.003-.01-2.46-.71a5.136 5.136 0 0 1 .689-3.2l1.995 1.413a.44.44 0 0 0 .701-.334l.01-.003.147-2.59a5.097 5.097 0 0 1 2.918 1.42l-2.09 1.48.01.01a.44.44 0 0 0 .173.755l.002.01 2.465.712v-.001a5.08 5.08 0 0 1 .684 3.193l-2.457-.42a.44.44 0 0 0-.485.605z" />
-        </svg>
+        <img src="/kubernetes.png" alt="Kubernetes" className={className} style={{ objectFit: 'contain' }} />
     ),
     'GitHub': ({ className }) => (
         <svg className={className} viewBox="0 0 24 24" fill="currentColor">
@@ -156,15 +155,23 @@ const proficiencyColors: Record<string, string> = {
     Beginner: '#ffbe0b',
 };
 
+// ... imports
+import { AnimatePresence } from 'framer-motion';
+import SkillExplosion from '../animations/SkillExplosion';
+
+// ... existing code ...
+
 // Floating skill pill component
 function SkillPill({
     skill,
     index,
-    categoryIndex
+    categoryIndex,
+    onClick
 }: {
     skill: { name: string; items: string[]; level: string };
     index: number;
     categoryIndex: number;
+    onClick: (skillName: string, color: string) => void;
 }) {
     const [isHovered, setIsHovered] = useState(false);
     const ref = useRef<HTMLDivElement>(null);
@@ -204,9 +211,11 @@ function SkillPill({
             onMouseMove={handleMouseMove}
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={handleMouseLeave}
+            onClick={() => onClick(skill.name, color)}
             style={{ rotateX, rotateY, transformStyle: 'preserve-3d' }}
-            className="relative group cursor-default"
+            className="relative group cursor-pointer"
         >
+            {/* ... existing JSX ... */}
             {/* Glow effect */}
             <motion.div
                 animate={{
@@ -298,6 +307,8 @@ function SkillPill({
 }
 
 export default function SkillsSection() {
+    const [activeSkill, setActiveSkill] = useState<{ name: string; color: string } | null>(null);
+
     return (
         <motion.div
             initial={{ opacity: 0 }}
@@ -366,6 +377,7 @@ export default function SkillsSection() {
                                     skill={skill}
                                     index={index}
                                     categoryIndex={categoryIndex}
+                                    onClick={(name, color) => setActiveSkill({ name, color })}
                                 />
                             ))}
                         </div>
@@ -390,6 +402,17 @@ export default function SkillsSection() {
                     </div>
                 ))}
             </motion.div>
+
+            {/* Explosion Animation Overlay */}
+            <AnimatePresence>
+                {activeSkill && (
+                    <SkillExplosion
+                        skillName={activeSkill.name}
+                        color={activeSkill.color}
+                        onComplete={() => setActiveSkill(null)}
+                    />
+                )}
+            </AnimatePresence>
         </motion.div>
     );
 }

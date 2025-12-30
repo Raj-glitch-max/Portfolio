@@ -11,6 +11,8 @@ import BlogSection from './components/sections/BlogSection';
 import ContactSection from './components/sections/ContactSection';
 import WelcomeSection from './components/sections/WelcomeSection';
 
+import BackButton from './components/BackButton';
+
 function PortfolioContent() {
   const { isInitialized, currentSection } = useApp();
 
@@ -42,6 +44,9 @@ function PortfolioContent() {
 
       {/* Loading Modal */}
       <LoadingModal />
+
+      {/* Back Button - Mobile Only (Fixed) */}
+      <BackButton className="fixed top-4 left-4 z-50 md:hidden" />
 
       {/* Main Content */}
       {!isInitialized ? (

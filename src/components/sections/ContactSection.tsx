@@ -1,10 +1,12 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { useState } from 'react';
-import { Mail, MapPin, Linkedin, Github, Twitter, Copy, Check } from 'lucide-react';
+import { Mail, MapPin, Linkedin, Github, Twitter, Check } from 'lucide-react';
 import { PERSONAL_INFO, SOCIAL_LINKS } from '../../lib/constants';
+import FloatingContactCard from '../FloatingContactCard';
+import ContactFormCard from '../ContactFormCard';
 
-interface ContactCard {
-    icon: any;
+interface ContactCardData {
+    icon: React.ElementType;
     label: string;
     value: string;
     action: string;
@@ -25,7 +27,7 @@ export default function ContactSection() {
         }, 2000);
     };
 
-    const contactCards: ContactCard[] = [
+    const contactCards: ContactCardData[] = [
         {
             icon: Mail,
             label: 'EMAIL',
@@ -69,7 +71,7 @@ export default function ContactSection() {
                 initial={{ opacity: 0, y: 50 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, ease: 'easeOut' }}
-                className="space-y-8"
+                className="space-y-8 pb-20"
             >
                 {/* Header */}
                 <div>
@@ -82,64 +84,18 @@ export default function ContactSection() {
                 </div>
 
                 {/* Contact Cards Grid */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {contactCards.map((card, index) => {
-                        const Icon = card.icon;
-                        const delay = index * 0.1;
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 auto-rows-fr">
+                    {contactCards.map((card, index) => (
+                        <FloatingContactCard
+                            key={card.label}
+                            {...card}
+                            delay={index * 0.1}
+                            isCopied={copiedField === 'email' && card.label === 'EMAIL'}
+                        />
+                    ))}
 
-                        return (
-                            <motion.div
-                                key={card.label}
-                                initial={{ opacity: 0, scale: 0.8, rotate: -5 }}
-                                animate={{ opacity: 1, scale: 1, rotate: 0 }}
-                                transition={{ delay, duration: 0.4, ease: 'easeOut' }}
-                                whileHover={{
-                                    y: -8,
-                                    boxShadow: '0 8px 24px rgba(0, 217, 255, 0.3)',
-                                    borderColor: '#00d9ff'
-                                }}
-                                className="bg-darker-gray border border-text-muted/30 rounded-xl p-6 text-center space-y-4 hover:border-cyan-neon transition-all duration-200"
-                            >
-                                {/* Icon */}
-                                <motion.div
-                                    whileHover={{ scale: 1.1 }}
-                                    className="flex justify-center"
-                                >
-                                    <div className="w-12 h-12 bg-cyan-neon/10 rounded-full flex items-center justify-center">
-                                        <Icon className="w-6 h-6 text-cyan-neon" />
-                                    </div>
-                                </motion.div>
-
-                                {/* Label */}
-                                <div className="space-y-2">
-                                    <p className="text-text-muted text-xs uppercase font-medium tracking-wider">
-                                        {card.label}
-                                    </p>
-                                    <p className="text-white text-sm font-medium break-words">
-                                        {card.value}
-                                    </p>
-                                </div>
-
-                                {/* Action Button */}
-                                <button
-                                    onClick={card.onClick}
-                                    className="w-full px-4 py-2 border border-cyan-neon/50 rounded-lg hover:bg-cyan-neon/10 hover:border-cyan-neon transition-all text-cyan-neon text-sm font-medium flex items-center justify-center gap-2"
-                                >
-                                    {copiedField === card.label.toLowerCase() ? (
-                                        <>
-                                            <Check className="w-4 h-4" />
-                                            <span>Copied!</span>
-                                        </>
-                                    ) : (
-                                        <>
-                                            {card.action === 'Copy' && <Copy className="w-4 h-4" />}
-                                            <span>{card.action}</span>
-                                        </>
-                                    )}
-                                </button>
-                            </motion.div>
-                        );
-                    })}
+                    {/* Contact Form Card */}
+                    <ContactFormCard delay={contactCards.length * 0.1} className="col-span-1" />
                 </div>
 
                 {/* Additional Info */}

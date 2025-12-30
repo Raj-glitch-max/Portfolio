@@ -32,7 +32,13 @@ export default function NetworkTopologyAnimation() {
                 transition={{ duration: 0.5 }}
                 className="w-24 h-24 rounded-full bg-cyan-neon/20 border-2 border-cyan-neon flex items-center justify-center shadow-glow-cyan"
             >
-                <span className="font-mono text-cyan-neon font-semibold">You</span>
+                <div className="w-full h-full rounded-full overflow-hidden border-2 border-cyan-neon">
+                    <img
+                        src="/profile.png"
+                        alt="You"
+                        className="w-full h-full object-cover"
+                    />
+                </div>
             </motion.div>
 
             {/* Connection Nodes */}

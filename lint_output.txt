@@ -1,0 +1,364 @@
+
+> portfolio@0.0.0 lint
+> eslint .
+
+
+/home/raj/Documents/SIM/portfolio/src/components/FloatingContactCard.tsx
+  7:11  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/raj/Documents/SIM/portfolio/src/components/ScriptSidebar.tsx
+  174:22  error  Error: Cannot create components during render
+
+Components created during render will reset their state each time they are created. Declare components outside of render.
+
+/home/raj/Documents/SIM/portfolio/src/components/ScriptSidebar.tsx:174:22
+  172 |                 {/* Navigation Items */}
+  173 |                 <div className="flex-1">
+> 174 |                     <SidebarContent />
+      |                      ^^^^^^^^^^^^^^ This component is created during render
+  175 |                 </div>
+  176 |
+  177 |                 {/* Status */}
+
+/home/raj/Documents/SIM/portfolio/src/components/ScriptSidebar.tsx:135:28
+  133 |     };
+  134 |
+> 135 |     const SidebarContent = () => (
+      |                            ^^^^^^^
+> 136 |         <div className="flex flex-col gap-2">
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 137 |             {SCRIPT_ITEMS.map((script, index) => (
+      …
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 146 |         </div>
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 147 |     );
+      | ^^^^^^ The component is created during render here
+  148 |
+  149 |     return (
+  150 |         <>                                                                                           react-hooks/static-components
+  229:30  error  Error: Cannot create components during render
+
+Components created during render will reset their state each time they are created. Declare components outside of render.
+
+/home/raj/Documents/SIM/portfolio/src/components/ScriptSidebar.tsx:229:30
+  227 |                                 <h2 className="font-terminal text-cyan-neon">Navigation</h2>
+  228 |                             </div>
+> 229 |                             <SidebarContent />
+      |                              ^^^^^^^^^^^^^^ This component is created during render
+  230 |                         </motion.div>
+  231 |                     </>
+  232 |                 )}
+
+/home/raj/Documents/SIM/portfolio/src/components/ScriptSidebar.tsx:135:28
+  133 |     };
+  134 |
+> 135 |     const SidebarContent = () => (
+      |                            ^^^^^^^
+> 136 |         <div className="flex flex-col gap-2">
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 137 |             {SCRIPT_ITEMS.map((script, index) => (
+      …
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 146 |         </div>
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 147 |     );
+      | ^^^^^^ The component is created during render here
+  148 |
+  149 |     return (
+  150 |         <>  react-hooks/static-components
+
+/home/raj/Documents/SIM/portfolio/src/components/TechIcon.tsx
+  9:14  error  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+/home/raj/Documents/SIM/portfolio/src/components/animations/SkillExplosion.tsx
+    2:39  error    'useCallback' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               @typescript-eslint/no-unused-vars
+   74:13  error    Error: Cannot access variable before it is declared
+
+`spawnParticle` is accessed before it is declared, which prevents the earlier access from updating when this value changes over time.
+
+/home/raj/Documents/SIM/portfolio/src/components/animations/SkillExplosion.tsx:74:13
+  72 |         // Spawn initial 5 particles
+  73 |         for (let i = 0; i < 5; i++) {
+> 74 |             spawnParticle(true);
+     |             ^^^^^^^^^^^^^ `spawnParticle` accessed before it is declared
+  75 |         }
+  76 |
+  77 |         // Start Loop
+
+/home/raj/Documents/SIM/portfolio/src/components/animations/SkillExplosion.tsx:82:5
+   80 |     }, [skillName]);
+   81 |
+>  82 |     const spawnParticle = (randomPos: boolean = false) => {
+      |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+>  83 |         const id = nextIdRef.current++;
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+>  84 |         const cmd = commandsRef.current[id % commandsRef.current.length];
+      …
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 126 |         });
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 127 |     };
+      | ^^^^^^^ `spawnParticle` is declared here
+  128 |
+  129 |     const updatePhysics = () => {
+  130 |         const width = window.innerWidth;                                                                             react-hooks/immutability
+   78:52  error    Error: Cannot access variable before it is declared
+
+`updatePhysics` is accessed before it is declared, which prevents the earlier access from updating when this value changes over time.
+
+/home/raj/Documents/SIM/portfolio/src/components/animations/SkillExplosion.tsx:78:52
+  76 |
+  77 |         // Start Loop
+> 78 |         requestRef.current = requestAnimationFrame(updatePhysics);
+     |                                                    ^^^^^^^^^^^^^ `updatePhysics` accessed before it is declared
+  79 |         return () => cancelAnimationFrame(requestRef.current!);
+  80 |     }, [skillName]);
+  81 |
+
+/home/raj/Documents/SIM/portfolio/src/components/animations/SkillExplosion.tsx:129:5
+  127 |     };
+  128 |
+> 129 |     const updatePhysics = () => {
+      |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 130 |         const width = window.innerWidth;
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 131 |         const height = window.innerHeight;
+      …
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 196 |         requestRef.current = requestAnimationFrame(updatePhysics);
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 197 |     };
+      | ^^^^^^^ `updatePhysics` is declared here
+  198 |
+  199 |     // Interaction Handlers
+  200 |     const handleMouseDown = (e: React.MouseEvent | React.TouchEvent, id: number) => {  react-hooks/immutability
+   80:8   warning  React Hook useEffect has missing dependencies: 'spawnParticle' and 'updatePhysics'. Either include them or remove the dependency array                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                react-hooks/exhaustive-deps
+   85:26  error    Error: Cannot call impure function during render
+
+`Math.random` is an impure function. Calling an impure function can produce unstable results that update unpredictably when the component happens to re-render. (https://react.dev/reference/rules/components-and-hooks-must-be-pure#components-and-hooks-must-be-idempotent).
+
+/home/raj/Documents/SIM/portfolio/src/components/animations/SkillExplosion.tsx:85:26
+  83 |         const id = nextIdRef.current++;
+  84 |         const cmd = commandsRef.current[id % commandsRef.current.length];
+> 85 |         const angleDeg = Math.random() * 360;
+     |                          ^^^^^^^^^^^^^ Cannot call impure function
+  86 |         const angleRad = angleDeg * Math.PI / 180;
+  87 |         const speed = 8 + Math.random() * 12;
+  88 |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           react-hooks/purity
+   87:27  error    Error: Cannot call impure function during render
+
+`Math.random` is an impure function. Calling an impure function can produce unstable results that update unpredictably when the component happens to re-render. (https://react.dev/reference/rules/components-and-hooks-must-be-pure#components-and-hooks-must-be-idempotent).
+
+/home/raj/Documents/SIM/portfolio/src/components/animations/SkillExplosion.tsx:87:27
+  85 |         const angleDeg = Math.random() * 360;
+  86 |         const angleRad = angleDeg * Math.PI / 180;
+> 87 |         const speed = 8 + Math.random() * 12;
+     |                           ^^^^^^^^^^^^^ Cannot call impure function
+  88 |
+  89 |         const width = window.innerWidth;
+  90 |         const height = window.innerHeight;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        react-hooks/purity
+  110:23  error    Error: Cannot call impure function during render
+
+`Math.random` is an impure function. Calling an impure function can produce unstable results that update unpredictably when the component happens to re-render. (https://react.dev/reference/rules/components-and-hooks-must-be-pure#components-and-hooks-must-be-idempotent).
+
+/home/raj/Documents/SIM/portfolio/src/components/animations/SkillExplosion.tsx:110:23
+  108 |             vx: Math.cos(angleRad) * speed,
+  109 |             vy: Math.sin(angleRad) * speed,
+> 110 |             rotation: Math.random() * 360,
+      |                       ^^^^^^^^^^^^^ Cannot call impure function
+  111 |             rotationSpeed: (Math.random() - 0.5) * 2,
+  112 |             scale: 0.8 + Math.random() * 0.4,
+  113 |             radius: 30,                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        react-hooks/purity
+  111:29  error    Error: Cannot call impure function during render
+
+`Math.random` is an impure function. Calling an impure function can produce unstable results that update unpredictably when the component happens to re-render. (https://react.dev/reference/rules/components-and-hooks-must-be-pure#components-and-hooks-must-be-idempotent).
+
+/home/raj/Documents/SIM/portfolio/src/components/animations/SkillExplosion.tsx:111:29
+  109 |             vy: Math.sin(angleRad) * speed,
+  110 |             rotation: Math.random() * 360,
+> 111 |             rotationSpeed: (Math.random() - 0.5) * 2,
+      |                             ^^^^^^^^^^^^^ Cannot call impure function
+  112 |             scale: 0.8 + Math.random() * 0.4,
+  113 |             radius: 30,
+  114 |             isDragging: false                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                react-hooks/purity
+  112:26  error    Error: Cannot call impure function during render
+
+`Math.random` is an impure function. Calling an impure function can produce unstable results that update unpredictably when the component happens to re-render. (https://react.dev/reference/rules/components-and-hooks-must-be-pure#components-and-hooks-must-be-idempotent).
+
+/home/raj/Documents/SIM/portfolio/src/components/animations/SkillExplosion.tsx:112:26
+  110 |             rotation: Math.random() * 360,
+  111 |             rotationSpeed: (Math.random() - 0.5) * 2,
+> 112 |             scale: 0.8 + Math.random() * 0.4,
+      |                          ^^^^^^^^^^^^^ Cannot call impure function
+  113 |             radius: 30,
+  114 |             isDragging: false
+  115 |         });                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   react-hooks/purity
+  399:54  error    Error: Cannot call impure function during render
+
+`Math.random` is an impure function. Calling an impure function can produce unstable results that update unpredictably when the component happens to re-render. (https://react.dev/reference/rules/components-and-hooks-must-be-pure#components-and-hooks-must-be-idempotent).
+
+/home/raj/Documents/SIM/portfolio/src/components/animations/SkillExplosion.tsx:399:54
+  397 |                             style={{
+  398 |                                 textShadow: '0:2px 4px rgba(0,0,0,0.5)',
+> 399 |                                 transform: `rotate(${Math.random() * 10 - 5}deg)`
+      |                                                      ^^^^^^^^^^^^^ Cannot call impure function
+  400 |                             }}
+  401 |                         >
+  402 |                             {tease.msg}                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       react-hooks/purity
+
+/home/raj/Documents/SIM/portfolio/src/components/sections/ContactSection.tsx
+  9:11  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/raj/Documents/SIM/portfolio/src/components/sections/SkillsSection.tsx
+  259:26  error  Error: Cannot create components during render
+
+Components created during render will reset their state each time they are created. Declare components outside of render.
+
+/home/raj/Documents/SIM/portfolio/src/components/sections/SkillsSection.tsx:259:26
+  257 |                         }}
+  258 |                     >
+> 259 |                         <Icon className="w-5 h-5" />
+      |                          ^^^^ This component is created during render
+  260 |                     </div>
+  261 |                     {/* Pulse ring */}
+  262 |                     {isHovered && (
+
+/home/raj/Documents/SIM/portfolio/src/components/sections/SkillsSection.tsx:177:18
+  175 |     const [isHovered, setIsHovered] = useState(false);
+  176 |     const ref = useRef<HTMLDivElement>(null);
+> 177 |     const Icon = getIconForSkill(skill.name);
+      |                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^ The component is created during render here
+  178 |     const color = proficiencyColors[skill.level] || '#00d9ff';
+  179 |
+  180 |     // 3D tilt effect  react-hooks/static-components
+
+/home/raj/Documents/SIM/portfolio/src/components/sections/WelcomeSection.tsx
+   88:47  error  Error: Cannot call impure function during render
+
+`Math.random` is an impure function. Calling an impure function can produce unstable results that update unpredictably when the component happens to re-render. (https://react.dev/reference/rules/components-and-hooks-must-be-pure#components-and-hooks-must-be-idempotent).
+
+/home/raj/Documents/SIM/portfolio/src/components/sections/WelcomeSection.tsx:88:47
+  86 |                 <motion.div
+  87 |                     key={i}
+> 88 |                     initial={{ opacity: 0, x: Math.random() * 100 - 50, y: Math.random() * 100 - 50 }}
+     |                                               ^^^^^^^^^^^^^ Cannot call impure function
+  89 |                     animate={{
+  90 |                         opacity: [0, 0.4, 0],
+  91 |                         x: [Math.random() * 200 - 100, Math.random() * 200 - 100],                               react-hooks/purity
+   88:76  error  Error: Cannot call impure function during render
+
+`Math.random` is an impure function. Calling an impure function can produce unstable results that update unpredictably when the component happens to re-render. (https://react.dev/reference/rules/components-and-hooks-must-be-pure#components-and-hooks-must-be-idempotent).
+
+/home/raj/Documents/SIM/portfolio/src/components/sections/WelcomeSection.tsx:88:76
+  86 |                 <motion.div
+  87 |                     key={i}
+> 88 |                     initial={{ opacity: 0, x: Math.random() * 100 - 50, y: Math.random() * 100 - 50 }}
+     |                                                                            ^^^^^^^^^^^^^ Cannot call impure function
+  89 |                     animate={{
+  90 |                         opacity: [0, 0.4, 0],
+  91 |                         x: [Math.random() * 200 - 100, Math.random() * 200 - 100],  react-hooks/purity
+   91:29  error  Error: Cannot call impure function during render
+
+`Math.random` is an impure function. Calling an impure function can produce unstable results that update unpredictably when the component happens to re-render. (https://react.dev/reference/rules/components-and-hooks-must-be-pure#components-and-hooks-must-be-idempotent).
+
+/home/raj/Documents/SIM/portfolio/src/components/sections/WelcomeSection.tsx:91:29
+  89 |                     animate={{
+  90 |                         opacity: [0, 0.4, 0],
+> 91 |                         x: [Math.random() * 200 - 100, Math.random() * 200 - 100],
+     |                             ^^^^^^^^^^^^^ Cannot call impure function
+  92 |                         y: [Math.random() * 200 - 100, Math.random() * 200 - 100],
+  93 |                     }}
+  94 |                     transition={{                                                                    react-hooks/purity
+   91:56  error  Error: Cannot call impure function during render
+
+`Math.random` is an impure function. Calling an impure function can produce unstable results that update unpredictably when the component happens to re-render. (https://react.dev/reference/rules/components-and-hooks-must-be-pure#components-and-hooks-must-be-idempotent).
+
+/home/raj/Documents/SIM/portfolio/src/components/sections/WelcomeSection.tsx:91:56
+  89 |                     animate={{
+  90 |                         opacity: [0, 0.4, 0],
+> 91 |                         x: [Math.random() * 200 - 100, Math.random() * 200 - 100],
+     |                                                        ^^^^^^^^^^^^^ Cannot call impure function
+  92 |                         y: [Math.random() * 200 - 100, Math.random() * 200 - 100],
+  93 |                     }}
+  94 |                     transition={{                                         react-hooks/purity
+   92:29  error  Error: Cannot call impure function during render
+
+`Math.random` is an impure function. Calling an impure function can produce unstable results that update unpredictably when the component happens to re-render. (https://react.dev/reference/rules/components-and-hooks-must-be-pure#components-and-hooks-must-be-idempotent).
+
+/home/raj/Documents/SIM/portfolio/src/components/sections/WelcomeSection.tsx:92:29
+  90 |                         opacity: [0, 0.4, 0],
+  91 |                         x: [Math.random() * 200 - 100, Math.random() * 200 - 100],
+> 92 |                         y: [Math.random() * 200 - 100, Math.random() * 200 - 100],
+     |                             ^^^^^^^^^^^^^ Cannot call impure function
+  93 |                     }}
+  94 |                     transition={{
+  95 |                         duration: 10 + Math.random() * 10,                                        react-hooks/purity
+   92:56  error  Error: Cannot call impure function during render
+
+`Math.random` is an impure function. Calling an impure function can produce unstable results that update unpredictably when the component happens to re-render. (https://react.dev/reference/rules/components-and-hooks-must-be-pure#components-and-hooks-must-be-idempotent).
+
+/home/raj/Documents/SIM/portfolio/src/components/sections/WelcomeSection.tsx:92:56
+  90 |                         opacity: [0, 0.4, 0],
+  91 |                         x: [Math.random() * 200 - 100, Math.random() * 200 - 100],
+> 92 |                         y: [Math.random() * 200 - 100, Math.random() * 200 - 100],
+     |                                                        ^^^^^^^^^^^^^ Cannot call impure function
+  93 |                     }}
+  94 |                     transition={{
+  95 |                         duration: 10 + Math.random() * 10,             react-hooks/purity
+   95:40  error  Error: Cannot call impure function during render
+
+`Math.random` is an impure function. Calling an impure function can produce unstable results that update unpredictably when the component happens to re-render. (https://react.dev/reference/rules/components-and-hooks-must-be-pure#components-and-hooks-must-be-idempotent).
+
+/home/raj/Documents/SIM/portfolio/src/components/sections/WelcomeSection.tsx:95:40
+  93 |                     }}
+  94 |                     transition={{
+> 95 |                         duration: 10 + Math.random() * 10,
+     |                                        ^^^^^^^^^^^^^ Cannot call impure function
+  96 |                         repeat: Infinity,
+  97 |                         delay: i * 2,
+  98 |                         ease: "linear"                                                                                                                          react-hooks/purity
+  102:39  error  Error: Cannot call impure function during render
+
+`Math.random` is an impure function. Calling an impure function can produce unstable results that update unpredictably when the component happens to re-render. (https://react.dev/reference/rules/components-and-hooks-must-be-pure#components-and-hooks-must-be-idempotent).
+
+/home/raj/Documents/SIM/portfolio/src/components/sections/WelcomeSection.tsx:102:39
+  100 |                     className="absolute font-mono text-xs text-cyan-neon/30 pointer-events-none whitespace-nowrap hidden md:block"
+  101 |                     style={{
+> 102 |                         left: `${10 + Math.random() * 80}%`,
+      |                                       ^^^^^^^^^^^^^ Cannot call impure function
+  103 |                         top: `${10 + Math.random() * 80}%`,
+  104 |                     }}
+  105 |                 >                            react-hooks/purity
+  103:38  error  Error: Cannot call impure function during render
+
+`Math.random` is an impure function. Calling an impure function can produce unstable results that update unpredictably when the component happens to re-render. (https://react.dev/reference/rules/components-and-hooks-must-be-pure#components-and-hooks-must-be-idempotent).
+
+/home/raj/Documents/SIM/portfolio/src/components/sections/WelcomeSection.tsx:103:38
+  101 |                     style={{
+  102 |                         left: `${10 + Math.random() * 80}%`,
+> 103 |                         top: `${10 + Math.random() * 80}%`,
+      |                                      ^^^^^^^^^^^^^ Cannot call impure function
+  104 |                     }}
+  105 |                 >
+  106 |                     $ {cmd}                                                                                                                                    react-hooks/purity
+
+/home/raj/Documents/SIM/portfolio/src/components/ui/Button.tsx
+  2:10  error  'COLORS' is defined but never used       @typescript-eslint/no-unused-vars
+  2:18  error  'TRANSITIONS' is defined but never used  @typescript-eslint/no-unused-vars
+  2:31  error  'SHADOWS' is defined but never used      @typescript-eslint/no-unused-vars
+
+/home/raj/Documents/SIM/portfolio/src/context/AppContext.tsx
+  42:17  error  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+/home/raj/Documents/SIM/portfolio/src/lib/utils.ts
+   24:14  error  'e' is defined but never used             @typescript-eslint/no-unused-vars
+   90:46  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   90:56  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   95:28  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  105:46  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  105:56  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  110:28  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+✖ 36 problems (35 errors, 1 warning)
+

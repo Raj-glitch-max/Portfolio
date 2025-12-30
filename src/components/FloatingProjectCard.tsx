@@ -52,11 +52,11 @@ export default function FloatingProjectCard({
         setIsHovered(false);
     };
 
-    // Card size classes for bento grid
+    // Card size classes for bento grid - responsive
     const sizeClasses = {
         small: 'col-span-1 row-span-1',
-        medium: 'col-span-1 row-span-2',
-        large: 'col-span-2 row-span-1'
+        medium: 'col-span-1 md:row-span-2',
+        large: 'md:col-span-2 row-span-1'
     };
 
     return (

@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
-import { Mail, MapPin, Download, Github, Linkedin } from 'lucide-react';
-import { PERSONAL_INFO } from '../lib/constants';
+import { Mail, MapPin, Download, Github, Linkedin, Twitter } from 'lucide-react';
+import { PERSONAL_INFO, SOCIAL_LINKS } from '../lib/constants';
 
 export default function ProfileSidebar() {
     const handleDownloadCV = () => {
@@ -82,20 +82,20 @@ export default function ProfileSidebar() {
                 <div className="h-px bg-gradient-to-r from-transparent via-cyan-neon/30 to-transparent mb-5" />
 
                 {/* Contact Info */}
-                <div className="space-y-4 mb-5">
+                <div className="space-y-5 mb-6">
                     {/* Email */}
                     <motion.div
                         whileHover={{ x: 4 }}
-                        className="flex items-start gap-3 group"
+                        className="flex items-center gap-4 group"
                     >
-                        <div className="w-8 h-8 rounded-lg bg-cyan-neon/10 flex items-center justify-center flex-shrink-0">
-                            <Mail className="w-4 h-4 text-cyan-neon" />
+                        <div className="w-10 h-10 rounded-xl bg-cyan-neon/10 flex items-center justify-center flex-shrink-0 border border-cyan-neon/20 group-hover:border-cyan-neon/50 transition-colors">
+                            <Mail className="w-5 h-5 text-cyan-neon" />
                         </div>
                         <div className="flex-1 min-w-0">
-                            <p className="text-[10px] text-text-muted uppercase tracking-wider">Email</p>
+                            <p className="text-[11px] text-text-muted uppercase tracking-wider font-bold mb-0.5">Email</p>
                             <a
                                 href={`mailto:${PERSONAL_INFO.email}`}
-                                className="text-xs text-text-primary hover:text-cyan-neon transition-colors break-all"
+                                className="text-xs text-text-primary hover:text-cyan-neon transition-colors break-words font-medium"
                             >
                                 {PERSONAL_INFO.email}
                             </a>
@@ -105,28 +105,28 @@ export default function ProfileSidebar() {
                     {/* Location */}
                     <motion.div
                         whileHover={{ x: 4 }}
-                        className="flex items-start gap-3 group"
+                        className="flex items-center gap-4 group"
                     >
-                        <div className="w-8 h-8 rounded-lg bg-cyan-neon/10 flex items-center justify-center flex-shrink-0">
-                            <MapPin className="w-4 h-4 text-cyan-neon" />
+                        <div className="w-10 h-10 rounded-xl bg-cyan-neon/10 flex items-center justify-center flex-shrink-0 border border-cyan-neon/20 group-hover:border-cyan-neon/50 transition-colors">
+                            <MapPin className="w-5 h-5 text-cyan-neon" />
                         </div>
                         <div className="flex-1">
-                            <p className="text-[10px] text-text-muted uppercase tracking-wider">Location</p>
-                            <p className="text-xs text-text-primary">{PERSONAL_INFO.location}</p>
+                            <p className="text-[11px] text-text-muted uppercase tracking-wider font-bold mb-0.5">Location</p>
+                            <p className="text-xs text-text-primary font-medium">{PERSONAL_INFO.location}</p>
                         </div>
                     </motion.div>
 
                     {/* Status */}
                     <motion.div
                         whileHover={{ x: 4 }}
-                        className="flex items-start gap-3"
+                        className="flex items-center gap-4 group"
                     >
-                        <div className="w-8 h-8 rounded-lg bg-success-green/10 flex items-center justify-center flex-shrink-0">
+                        <div className="w-10 h-10 rounded-xl bg-success-green/10 flex items-center justify-center flex-shrink-0 border border-success-green/20 group-hover:border-success-green/50 transition-colors">
                             <div className="w-3 h-3 rounded-full bg-success-green animate-pulse" />
                         </div>
                         <div className="flex-1">
-                            <p className="text-[10px] text-text-muted uppercase tracking-wider">Status</p>
-                            <p className="text-xs text-success-green font-medium">{PERSONAL_INFO.status}</p>
+                            <p className="text-[11px] text-text-muted uppercase tracking-wider font-bold mb-0.5">Status</p>
+                            <p className="text-xs text-success-green font-bold">{PERSONAL_INFO.status}</p>
                         </div>
                     </motion.div>
                 </div>
@@ -158,24 +158,23 @@ export default function ProfileSidebar() {
 
                 {/* Social Links */}
                 <div className="flex justify-center gap-3 mt-4">
-                    <motion.a
-                        href="https://github.com/Raj-glitch-max"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        whileHover={{ scale: 1.1, y: -2 }}
-                        className="w-10 h-10 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center hover:border-cyan-neon/50 hover:bg-cyan-neon/10 transition-all"
-                    >
-                        <Github className="w-5 h-5 text-text-secondary hover:text-cyan-neon" />
-                    </motion.a>
-                    <motion.a
-                        href="https://linkedin.com/in/raj-patil"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        whileHover={{ scale: 1.1, y: -2 }}
-                        className="w-10 h-10 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center hover:border-cyan-neon/50 hover:bg-cyan-neon/10 transition-all"
-                    >
-                        <Linkedin className="w-5 h-5 text-text-secondary hover:text-cyan-neon" />
-                    </motion.a>
+                    {SOCIAL_LINKS.map((link) => {
+                        const Icon = link.platform === 'GitHub' ? Github : link.platform === 'LinkedIn' ? Linkedin : link.platform === 'Twitter' ? Twitter : Mail;
+                        // Actually, I need to import X or Twitter icon if available, or use a generic one.
+                        // Lucide has 'Twitter' or 'X'. Let's check imports.
+                        return (
+                            <motion.a
+                                key={link.platform}
+                                href={link.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                whileHover={{ scale: 1.1, y: -2 }}
+                                className="w-10 h-10 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center hover:border-cyan-neon/50 hover:bg-cyan-neon/10 transition-all"
+                            >
+                                <Icon className="w-5 h-5 text-text-secondary hover:text-cyan-neon" />
+                            </motion.a>
+                        );
+                    })}
                 </div>
             </motion.div>
         </motion.aside>

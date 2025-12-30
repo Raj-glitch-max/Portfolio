@@ -21,73 +21,46 @@ export function hasWebGLSupport(): boolean {
             window.WebGLRenderingContext &&
             (canvas.getContext('webgl') || canvas.getContext('experimental-webgl'))
         );
-    } catch (e) {
+    } catch {
         return false;
     }
 }
 
-// Random number between min and max
-export function random(min: number, max: number): number {
+// ... (keep existing code)
+
+// Random number generator
+export function random(min: number, max: number) {
     return Math.random() * (max - min) + min;
 }
 
-// Random integer between min and max (inclusive)
-export function randomInt(min: number, max: number): number {
-    return Math.floor(random(min, max + 1));
+export function randomInt(min: number, max: number) {
+    return Math.floor(random(min, max));
 }
 
-// Random element from array
-export function randomElement<T>(array: T[]): T {
-    return array[randomInt(0, array.length - 1)];
+export function randomElement<T>(arr: T[]): T {
+    return arr[Math.floor(Math.random() * arr.length)];
 }
 
-// Delay/sleep function
-export function delay(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
-}
-
-// Measure FPS
+// FPS Meter
 export class FPSMeter {
-    private frames = 0;
-    private lastTime = performance.now();
-    private fps = 60;
+    private lastTime: number = performance.now();
+    private frames: number = 0;
+    private fps: number = 60;
 
-    measure(): number {
-        this.frames++;
+    measure() {
         const now = performance.now();
-        const delta = now - this.lastTime;
-
-        if (delta >= 1000) {
-            this.fps = Math.round((this.frames * 1000) / delta);
+        this.frames++;
+        if (now >= this.lastTime + 1000) {
+            this.fps = this.frames;
             this.frames = 0;
             this.lastTime = now;
         }
-
         return this.fps;
     }
-
-    get currentFPS(): number {
-        return this.fps;
-    }
-}
-
-// Download file
-export function downloadFile(url: string, filename: string): void {
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = filename;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-}
-
-// Open URL in new tab
-export function openInNewTab(url: string): void {
-    window.open(url, '_blank', 'noopener,noreferrer');
 }
 
 // Throttle function
-export function throttle<T extends (...args: any[]) => any>(
+export function throttle<T extends (...args: any[]) => void>(
     func: T,
     limit: number
 ): (...args: Parameters<T>) => void {
@@ -102,11 +75,11 @@ export function throttle<T extends (...args: any[]) => any>(
 }
 
 // Debounce function
-export function debounce<T extends (...args: any[]) => any>(
+export function debounce<T extends (...args: any[]) => void>(
     func: T,
     wait: number
 ): (...args: Parameters<T>) => void {
-    let timeout: number | null = null;
+    let timeout: ReturnType<typeof setTimeout> | null = null;
     return function (this: any, ...args: Parameters<T>) {
         if (timeout) clearTimeout(timeout);
         timeout = setTimeout(() => func.apply(this, args), wait);

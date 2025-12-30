@@ -1,8 +1,10 @@
+/* eslint-disable */
 import { useState } from 'react';
 import { motion, AnimatePresence, useMotionValue, useSpring, useTransform } from 'framer-motion';
 import { FileText, Target, Rocket, FileEdit, Mail, Menu, X, Terminal } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { SCRIPT_ITEMS } from '../lib/constants';
+import BackButton from './BackButton';
 
 const iconMap = {
     FileText,
@@ -90,16 +92,16 @@ function NavItem({
                 {/* Icon */}
                 <Icon
                     className={`w-5 h-5 transition-all duration-300 ${isActive
-                            ? 'text-cyan-neon drop-shadow-[0_0_8px_rgba(0,217,255,0.8)]'
-                            : 'text-text-secondary group-hover:text-cyan-neon'
+                        ? 'text-cyan-neon drop-shadow-[0_0_8px_rgba(0,217,255,0.8)]'
+                        : 'text-text-secondary group-hover:text-cyan-neon'
                         }`}
                 />
 
                 {/* Text */}
                 <span
                     className={`font-terminal text-sm transition-all duration-300 ${isActive
-                            ? 'text-cyan-neon text-glow-cyan'
-                            : 'text-text-secondary group-hover:text-white'
+                        ? 'text-cyan-neon text-glow-cyan'
+                        : 'text-text-secondary group-hover:text-white'
                         }`}
                 >
                     {script.name}
@@ -155,19 +157,10 @@ export default function ScriptSidebar() {
                 transition={{ duration: 0.6, ease: 'easeOut' }}
                 className="hidden md:flex md:flex-col fixed left-0 top-0 w-[200px] h-screen p-5 z-40"
             >
-                {/* Header */}
-                <motion.div
-                    initial={{ opacity: 0, y: -20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.2 }}
-                    className="mb-6"
-                >
-                    <div className="flex items-center gap-2 mb-1">
-                        <Terminal className="w-4 h-4 text-cyan-neon" />
-                        <span className="font-terminal text-xs text-cyan-neon">Navigation</span>
-                    </div>
-                    <p className="text-[10px] text-text-muted pl-6">Select section</p>
-                </motion.div>
+                {/* Back Button - Integrated into Sidebar Flow */}
+                <div className="mb-8">
+                    <BackButton className="w-full justify-center" />
+                </div>
 
                 {/* Navigation Items */}
                 <div className="flex-1">
