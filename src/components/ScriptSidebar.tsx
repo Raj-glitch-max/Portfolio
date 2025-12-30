@@ -67,93 +67,51 @@ function NavItem({
             {/* Glow effect behind */}
             <motion.div
                 animate={{
-                    opacity: isActive ? 0.6 : isHovered ? 0.3 : 0,
-                    scale: isActive ? 1.1 : 1,
+                    opacity: isActive ? 0.5 : isHovered ? 0.25 : 0,
+                    scale: isActive ? 1.05 : 1,
                 }}
-                className="
-                    absolute -inset-1 rounded-xl
-                    bg-gradient-to-r from-cyan-neon via-magenta-neon to-cyan-neon
-                    blur-lg
-                    animate-gradient-shift
-                "
+                className="absolute -inset-1 rounded-xl bg-gradient-to-r from-cyan-neon via-magenta-neon to-cyan-neon blur-md animate-gradient-shift"
                 style={{ backgroundSize: '200% 200%' }}
             />
 
-            {/* Main button */}
+            {/* Main button - glassmorphism */}
             <div
                 className={`
                     relative flex items-center gap-3 px-4 py-3 rounded-xl
                     border transition-all duration-300
                     backdrop-blur-md
                     ${isActive
-                        ? 'bg-gradient-to-r from-cyan-neon/20 to-magenta-neon/10 border-cyan-neon shadow-[0_0_20px_rgba(0,217,255,0.4)]'
-                        : 'bg-[rgba(22,27,34,0.5)] border-white/10 hover:border-cyan-neon/50 hover:bg-[rgba(22,27,34,0.7)]'
+                        ? 'bg-[rgba(0,217,255,0.15)] border-cyan-neon shadow-[0_0_20px_rgba(0,217,255,0.3)]'
+                        : 'bg-[rgba(22,27,34,0.6)] border-white/10 hover:border-cyan-neon/50 hover:bg-[rgba(22,27,34,0.8)]'
                     }
                 `}
-                style={{ transform: 'translateZ(20px)' }}
+                style={{ transform: 'translateZ(10px)' }}
             >
-                {/* Icon with glow */}
-                <div className="relative">
-                    <Icon
-                        className={`w-5 h-5 transition-all duration-300 ${isActive
+                {/* Icon */}
+                <Icon
+                    className={`w-5 h-5 transition-all duration-300 ${isActive
                             ? 'text-cyan-neon drop-shadow-[0_0_8px_rgba(0,217,255,0.8)]'
                             : 'text-text-secondary group-hover:text-cyan-neon'
-                            }`}
-                    />
-                    {/* Pulse ring for active */}
-                    {isActive && (
-                        <motion.div
-                            animate={{
-                                scale: [1, 1.5, 1],
-                                opacity: [0.5, 0, 0.5],
-                            }}
-                            transition={{
-                                duration: 2,
-                                repeat: Infinity,
-                                ease: 'easeInOut',
-                            }}
-                            className="absolute inset-0 rounded-full bg-cyan-neon"
-                        />
-                    )}
-                </div>
+                        }`}
+                />
 
                 {/* Text */}
                 <span
                     className={`font-terminal text-sm transition-all duration-300 ${isActive
-                        ? 'text-cyan-neon text-glow-cyan'
-                        : 'text-text-secondary group-hover:text-white'
+                            ? 'text-cyan-neon text-glow-cyan'
+                            : 'text-text-secondary group-hover:text-white'
                         }`}
                 >
                     {script.name}
                 </span>
 
-                {/* Active indicator line */}
-                <motion.div
-                    animate={{
-                        scaleX: isActive ? 1 : 0,
-                        opacity: isActive ? 1 : 0,
-                    }}
-                    className="
-                        absolute right-0 top-1/2 -translate-y-1/2
-                        w-1 h-8 rounded-l-full
-                        bg-gradient-to-b from-cyan-neon to-magenta-neon
-                    "
-                />
-
-                {/* Shine effect on hover */}
-                <motion.div
-                    animate={{
-                        x: isHovered ? '150%' : '-100%',
-                        opacity: isHovered ? 1 : 0,
-                    }}
-                    transition={{ duration: 0.5 }}
-                    className="
-                        absolute inset-0 rounded-xl
-                        bg-gradient-to-r from-transparent via-white/10 to-transparent
-                        skew-x-12
-                        pointer-events-none
-                    "
-                />
+                {/* Active indicator dot */}
+                {isActive && (
+                    <motion.div
+                        layoutId="activeIndicator"
+                        className="absolute right-3 w-2 h-2 rounded-full bg-cyan-neon shadow-[0_0_10px_rgba(0,217,255,0.8)]"
+                    />
+                )}
             </div>
         </motion.button>
     );
@@ -175,7 +133,7 @@ export default function ScriptSidebar() {
     };
 
     const SidebarContent = () => (
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-2">
             {SCRIPT_ITEMS.map((script, index) => (
                 <NavItem
                     key={script.id}
@@ -190,128 +148,41 @@ export default function ScriptSidebar() {
 
     return (
         <>
-            {/* Desktop Sidebar - Fixed Left */}
+            {/* Desktop Sidebar - Fully Transparent, Floating Nav */}
             <motion.aside
-                initial={{ opacity: 0, x: -100 }}
+                initial={{ opacity: 0, x: -50 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.6, ease: 'easeOut' }}
-                className="
-                    hidden md:flex md:flex-col
-                    fixed left-0 top-0
-                    w-[220px] h-screen
-                    bg-gradient-to-b from-[rgba(22,27,34,0.7)] via-[rgba(22,27,34,0.4)] to-[rgba(22,27,34,0.7)]
-                    backdrop-blur-2xl backdrop-saturate-[180%]
-                    p-5
-                    overflow-hidden
-                    z-40
-                "
+                className="hidden md:flex md:flex-col fixed left-0 top-0 w-[200px] h-screen p-5 z-40"
             >
-                {/* Decorative background elements */}
-                <div className="absolute inset-0 overflow-hidden pointer-events-none">
-                    {/* Top glow orb */}
-                    <motion.div
-                        animate={{
-                            y: [0, 20, 0],
-                            opacity: [0.15, 0.25, 0.15],
-                        }}
-                        transition={{
-                            duration: 8,
-                            repeat: Infinity,
-                            ease: 'easeInOut',
-                        }}
-                        className="
-                            absolute -top-20 -left-20
-                            w-48 h-48
-                            bg-gradient-to-br from-cyan-neon to-transparent
-                            rounded-full
-                            blur-3xl
-                        "
-                    />
-
-                    {/* Bottom glow orb */}
-                    <motion.div
-                        animate={{
-                            y: [0, -20, 0],
-                            opacity: [0.1, 0.2, 0.1],
-                        }}
-                        transition={{
-                            duration: 10,
-                            repeat: Infinity,
-                            ease: 'easeInOut',
-                        }}
-                        className="
-                            absolute -bottom-20 -right-20
-                            w-48 h-48
-                            bg-gradient-to-br from-magenta-neon to-transparent
-                            rounded-full
-                            blur-3xl
-                        "
-                    />
-
-                    {/* Floating particles */}
-                    {[...Array(5)].map((_, i) => (
-                        <motion.div
-                            key={i}
-                            animate={{
-                                y: [0, -100 - i * 20, 0],
-                                x: [0, (i % 2 ? 10 : -10), 0],
-                                opacity: [0, 0.6, 0],
-                            }}
-                            transition={{
-                                duration: 8 + i * 2,
-                                repeat: Infinity,
-                                delay: i * 1.5,
-                                ease: 'easeInOut',
-                            }}
-                            className="
-                                absolute bottom-20 left-1/2
-                                w-1 h-1
-                                bg-cyan-neon
-                                rounded-full
-                            "
-                            style={{ left: `${20 + i * 15}%` }}
-                        />
-                    ))}
-                </div>
-
-                {/* Header with terminal icon */}
+                {/* Header */}
                 <motion.div
                     initial={{ opacity: 0, y: -20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.2 }}
-                    className="relative mb-6 pb-4 border-b border-cyan-neon/20"
+                    className="mb-6"
                 >
-                    <div className="flex items-center gap-3">
-                        <div className="
-                            p-2 rounded-lg
-                            bg-gradient-to-br from-cyan-neon/20 to-magenta-neon/10
-                            border border-cyan-neon/30
-                        ">
-                            <Terminal className="w-5 h-5 text-cyan-neon" />
-                        </div>
-                        <div>
-                            <h3 className="font-terminal text-sm text-cyan-neon">Navigation</h3>
-                            <p className="text-xs text-text-muted">Select section</p>
-                        </div>
+                    <div className="flex items-center gap-2 mb-1">
+                        <Terminal className="w-4 h-4 text-cyan-neon" />
+                        <span className="font-terminal text-xs text-cyan-neon">Navigation</span>
                     </div>
+                    <p className="text-[10px] text-text-muted pl-6">Select section</p>
                 </motion.div>
 
                 {/* Navigation Items */}
-                <div className="relative z-10 space-y-1 flex-1">
+                <div className="flex-1">
                     <SidebarContent />
                 </div>
 
-                {/* Bottom decoration */}
+                {/* Status */}
                 <motion.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ delay: 0.6 }}
-                    className="relative mt-auto pt-4 border-t border-cyan-neon/10"
+                    className="flex items-center gap-2 text-xs text-text-muted mt-auto"
                 >
-                    <div className="flex items-center gap-2 text-xs text-text-muted">
-                        <div className="w-2 h-2 bg-success-green rounded-full animate-pulse" />
-                        <span className="font-mono">System Online</span>
-                    </div>
+                    <div className="w-2 h-2 bg-success-green rounded-full animate-pulse" />
+                    <span className="font-mono text-[10px]">System Online</span>
                 </motion.div>
             </motion.aside>
 
@@ -321,23 +192,9 @@ export default function ScriptSidebar() {
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ duration: 0.3, delay: 0.3 }}
                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                className="
-                    md:hidden fixed top-4 left-4 z-50
-                    w-12 h-12 flex items-center justify-center
-                    bg-gradient-to-br from-[rgba(22,27,34,0.9)] to-[rgba(22,27,34,0.7)]
-                    border border-cyan-neon/40
-                    rounded-xl
-                    backdrop-blur-xl
-                    shadow-[0_4px_20px_rgba(0,217,255,0.2)]
-                    hover:border-cyan-neon
-                    hover:shadow-[0_4px_30px_rgba(0,217,255,0.4)]
-                    transition-all duration-300
-                "
+                className="md:hidden fixed top-4 left-4 z-50 w-12 h-12 flex items-center justify-center bg-[rgba(22,27,34,0.8)] border border-cyan-neon/40 rounded-xl backdrop-blur-xl shadow-[0_4px_20px_rgba(0,217,255,0.2)] hover:border-cyan-neon transition-all duration-300"
             >
-                <motion.div
-                    animate={{ rotate: isMobileMenuOpen ? 180 : 0 }}
-                    transition={{ duration: 0.3 }}
-                >
+                <motion.div animate={{ rotate: isMobileMenuOpen ? 180 : 0 }} transition={{ duration: 0.3 }}>
                     {isMobileMenuOpen ? (
                         <X className="w-6 h-6 text-cyan-neon" />
                     ) : (
@@ -363,32 +220,13 @@ export default function ScriptSidebar() {
                             animate={{ x: 0 }}
                             exit={{ x: '-100%' }}
                             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-                            className="
-                                md:hidden fixed left-0 top-0 bottom-0
-                                w-80
-                                bg-gradient-to-b from-[rgba(22,27,34,0.95)] to-[rgba(22,27,34,0.9)]
-                                backdrop-blur-2xl
-                                border-r border-cyan-neon/30
-                                z-50 p-6 pt-20
-                                overflow-hidden
-                            "
+                            className="md:hidden fixed left-0 top-0 bottom-0 w-72 bg-[rgba(22,27,34,0.95)] backdrop-blur-2xl border-r border-cyan-neon/20 z-50 p-6 pt-20"
                         >
-                            {/* Background orbs for mobile */}
-                            <div className="absolute -top-20 -left-20 w-48 h-48 bg-cyan-neon/20 rounded-full blur-3xl" />
-                            <div className="absolute -bottom-20 -right-20 w-48 h-48 bg-magenta-neon/15 rounded-full blur-3xl" />
-
-                            <div className="relative z-10">
-                                <div className="flex items-center gap-3 mb-8 pb-4 border-b border-cyan-neon/20">
-                                    <div className="p-2 rounded-lg bg-cyan-neon/10 border border-cyan-neon/30">
-                                        <Terminal className="w-5 h-5 text-cyan-neon" />
-                                    </div>
-                                    <div>
-                                        <h2 className="font-terminal text-cyan-neon text-lg">Navigation</h2>
-                                        <p className="text-xs text-text-muted">Select section</p>
-                                    </div>
-                                </div>
-                                <SidebarContent />
+                            <div className="flex items-center gap-2 mb-6">
+                                <Terminal className="w-5 h-5 text-cyan-neon" />
+                                <h2 className="font-terminal text-cyan-neon">Navigation</h2>
                             </div>
+                            <SidebarContent />
                         </motion.div>
                     </>
                 )}

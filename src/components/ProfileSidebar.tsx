@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { Mail, MapPin, Download } from 'lucide-react';
+import { Mail, MapPin, Download, Github, Linkedin } from 'lucide-react';
 import { PERSONAL_INFO } from '../lib/constants';
 
 export default function ProfileSidebar() {
@@ -21,8 +21,6 @@ export default function ProfileSidebar() {
                 fixed right-0 top-0
                 w-full md:w-[280px]
                 h-screen
-                bg-gradient-to-b from-[rgba(22,27,34,0.6)] via-[rgba(22,27,34,0.4)] to-[rgba(22,27,34,0.6)]
-                backdrop-blur-2xl backdrop-saturate-[180%]
                 p-6
                 overflow-y-auto
                 z-40
@@ -30,94 +28,156 @@ export default function ProfileSidebar() {
                 transition-transform duration-300
             "
         >
-            {/* Profile Photo */}
-            <div className="flex flex-col items-center mb-6">
-                <div className="w-24 h-24 rounded-full border-2 border-cyan-neon shadow-glow-cyan overflow-hidden mb-4">
-                    <img
-                        src="/profile.png"
-                        alt="Raj Patil"
-                        className="w-full h-full object-cover"
-                        onError={(e) => {
-                            const target = e.target as HTMLImageElement;
-                            target.style.display = 'none';
-                            target.parentElement!.innerHTML = `
-                                <div class="w-full h-full bg-cyan-neon/20 flex items-center justify-center">
-                                    <span class="text-cyan-neon font-mono text-2xl font-bold">RP</span>
-                                </div>
-                            `;
-                        }}
-                    />
-                </div>
-
-                <h2 className="text-xl font-terminal text-white font-semibold text-center mb-1">
-                    {PERSONAL_INFO.name}
-                </h2>
-                <p className="text-sm text-text-secondary text-center mb-6">
-                    {PERSONAL_INFO.title}
-                </p>
-            </div>
-
-            {/* Divider */}
-            <div className="h-px bg-cyan-neon/20 mb-6" />
-
-            {/* Contact Info */}
-            <div className="space-y-4 mb-6">
-                {/* Email */}
-                <div className="flex items-start gap-3">
-                    <Mail className="w-5 h-5 text-cyan-neon flex-shrink-0 mt-0.5" />
-                    <div className="flex-1 min-w-0">
-                        <p className="text-xs text-text-muted mb-1">Email</p>
-                        <a
-                            href={`mailto:${PERSONAL_INFO.email}`}
-                            className="text-sm text-text-primary hover:text-cyan-neon transition-colors break-all"
-                        >
-                            {PERSONAL_INFO.email}
-                        </a>
-                    </div>
-                </div>
-
-                {/* Location */}
-                <div className="flex items-start gap-3">
-                    <MapPin className="w-5 h-5 text-cyan-neon flex-shrink-0 mt-0.5" />
-                    <div className="flex-1">
-                        <p className="text-xs text-text-muted mb-1">Location</p>
-                        <p className="text-sm text-text-primary">{PERSONAL_INFO.location}</p>
-                    </div>
-                </div>
-
-                {/* Status */}
-                <div className="flex items-start gap-3">
-                    <div className="w-5 h-5 flex items-center justify-center flex-shrink-0 mt-0.5">
-                        <div className="w-3 h-3 rounded-full bg-success-green animate-pulse" />
-                    </div>
-                    <div className="flex-1">
-                        <p className="text-xs text-text-muted mb-1">Status</p>
-                        <p className="text-sm text-success-green font-medium">{PERSONAL_INFO.status}</p>
-                    </div>
-                </div>
-            </div>
-
-            {/* Divider */}
-            <div className="h-px bg-cyan-neon/20 mb-6" />
-
-            {/* Download CV Button */}
-            <button
-                onClick={handleDownloadCV}
-                aria-label="Download CV / Resume"
+            {/* Profile Card - Glassmorphism */}
+            <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.5 }}
                 className="
-                    w-full py-3 px-4
-                    bg-cyan-neon/10
-                    border border-cyan-neon/50
-                    rounded-lg
-                    text-cyan-neon font-mono text-sm
-                    hover:bg-cyan-neon/20 hover:border-cyan-neon
-                    transition-all duration-300
-                    flex items-center justify-center gap-2
+                    relative rounded-2xl p-6
+                    bg-[rgba(22,27,34,0.6)]
+                    backdrop-blur-xl
+                    border border-white/10
+                    shadow-[0_8px_32px_rgba(0,0,0,0.3)]
                 "
             >
-                <Download className="w-4 h-4" />
-                <span>Download CV</span>
-            </button>
+                {/* Subtle glow */}
+                <div className="absolute -inset-px rounded-2xl bg-gradient-to-b from-cyan-neon/20 via-transparent to-magenta-neon/10 opacity-50 pointer-events-none" />
+
+                {/* Profile Photo */}
+                <div className="relative flex flex-col items-center mb-6">
+                    <motion.div
+                        whileHover={{ scale: 1.05 }}
+                        className="relative w-20 h-20 rounded-full overflow-hidden mb-4"
+                    >
+                        {/* Glow ring */}
+                        <div className="absolute -inset-1 rounded-full bg-gradient-to-r from-cyan-neon to-magenta-neon opacity-60 blur-sm" />
+                        <div className="relative w-full h-full rounded-full border-2 border-cyan-neon/50 overflow-hidden">
+                            <img
+                                src="/profile.png"
+                                alt="Raj Patil"
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                    const target = e.target as HTMLImageElement;
+                                    target.style.display = 'none';
+                                    target.parentElement!.innerHTML = `
+                                        <div class="w-full h-full bg-gradient-to-br from-cyan-neon/30 to-magenta-neon/20 flex items-center justify-center">
+                                            <span class="text-cyan-neon font-mono text-xl font-bold">RP</span>
+                                        </div>
+                                    `;
+                                }}
+                            />
+                        </div>
+                    </motion.div>
+
+                    <h2 className="text-lg font-terminal text-white font-semibold text-center">
+                        {PERSONAL_INFO.name}
+                    </h2>
+                    <p className="text-xs text-cyan-neon/80 text-center font-mono">
+                        {PERSONAL_INFO.title}
+                    </p>
+                </div>
+
+                {/* Divider */}
+                <div className="h-px bg-gradient-to-r from-transparent via-cyan-neon/30 to-transparent mb-5" />
+
+                {/* Contact Info */}
+                <div className="space-y-4 mb-5">
+                    {/* Email */}
+                    <motion.div
+                        whileHover={{ x: 4 }}
+                        className="flex items-start gap-3 group"
+                    >
+                        <div className="w-8 h-8 rounded-lg bg-cyan-neon/10 flex items-center justify-center flex-shrink-0">
+                            <Mail className="w-4 h-4 text-cyan-neon" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                            <p className="text-[10px] text-text-muted uppercase tracking-wider">Email</p>
+                            <a
+                                href={`mailto:${PERSONAL_INFO.email}`}
+                                className="text-xs text-text-primary hover:text-cyan-neon transition-colors break-all"
+                            >
+                                {PERSONAL_INFO.email}
+                            </a>
+                        </div>
+                    </motion.div>
+
+                    {/* Location */}
+                    <motion.div
+                        whileHover={{ x: 4 }}
+                        className="flex items-start gap-3 group"
+                    >
+                        <div className="w-8 h-8 rounded-lg bg-cyan-neon/10 flex items-center justify-center flex-shrink-0">
+                            <MapPin className="w-4 h-4 text-cyan-neon" />
+                        </div>
+                        <div className="flex-1">
+                            <p className="text-[10px] text-text-muted uppercase tracking-wider">Location</p>
+                            <p className="text-xs text-text-primary">{PERSONAL_INFO.location}</p>
+                        </div>
+                    </motion.div>
+
+                    {/* Status */}
+                    <motion.div
+                        whileHover={{ x: 4 }}
+                        className="flex items-start gap-3"
+                    >
+                        <div className="w-8 h-8 rounded-lg bg-success-green/10 flex items-center justify-center flex-shrink-0">
+                            <div className="w-3 h-3 rounded-full bg-success-green animate-pulse" />
+                        </div>
+                        <div className="flex-1">
+                            <p className="text-[10px] text-text-muted uppercase tracking-wider">Status</p>
+                            <p className="text-xs text-success-green font-medium">{PERSONAL_INFO.status}</p>
+                        </div>
+                    </motion.div>
+                </div>
+
+                {/* Divider */}
+                <div className="h-px bg-gradient-to-r from-transparent via-cyan-neon/30 to-transparent mb-5" />
+
+                {/* Download CV Button */}
+                <motion.button
+                    onClick={handleDownloadCV}
+                    whileHover={{ scale: 1.02, y: -2 }}
+                    whileTap={{ scale: 0.98 }}
+                    aria-label="Download CV / Resume"
+                    className="
+                        w-full py-3 px-4
+                        bg-gradient-to-r from-cyan-neon/20 to-magenta-neon/10
+                        border border-cyan-neon/50
+                        rounded-xl
+                        text-cyan-neon font-mono text-sm
+                        hover:border-cyan-neon
+                        hover:shadow-[0_0_20px_rgba(0,217,255,0.3)]
+                        transition-all duration-300
+                        flex items-center justify-center gap-2
+                    "
+                >
+                    <Download className="w-4 h-4" />
+                    <span>Download CV</span>
+                </motion.button>
+
+                {/* Social Links */}
+                <div className="flex justify-center gap-3 mt-4">
+                    <motion.a
+                        href="https://github.com/Raj-glitch-max"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        whileHover={{ scale: 1.1, y: -2 }}
+                        className="w-10 h-10 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center hover:border-cyan-neon/50 hover:bg-cyan-neon/10 transition-all"
+                    >
+                        <Github className="w-5 h-5 text-text-secondary hover:text-cyan-neon" />
+                    </motion.a>
+                    <motion.a
+                        href="https://linkedin.com/in/raj-patil"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        whileHover={{ scale: 1.1, y: -2 }}
+                        className="w-10 h-10 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center hover:border-cyan-neon/50 hover:bg-cyan-neon/10 transition-all"
+                    >
+                        <Linkedin className="w-5 h-5 text-text-secondary hover:text-cyan-neon" />
+                    </motion.a>
+                </div>
+            </motion.div>
         </motion.aside>
     );
 }
