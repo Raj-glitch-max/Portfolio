@@ -44,9 +44,7 @@ export const TechIcon: React.FC<TechIconProps> = ({ name, className = "w-6 h-6",
             </svg>
         ),
         kubernetes: (
-            <svg viewBox="0 0 24 24" fill={iconColor} className={className}>
-                <path d="M10.204 14.35l.007.01-.999 2.413a5.171 5.171 0 0 1-2.075-2.597l2.578-.437.004.005a.44.44 0 0 1 .484.606zm-.833-2.129a.44.44 0 0 0 .173-.756l.002-.011L7.585 9.7a5.143 5.143 0 0 0-.73 3.255l2.514-.725.002-.009zm1.145-1.98a.44.44 0 0 0 .699-.337l.01-.005.15-2.62a5.144 5.144 0 0 0-3.01 1.442l2.147 1.523.004-.002zm.76 2.75l.723.349.722-.347.18-.78-.5-.623h-.804l-.5.623.179.778zm1.5-3.095a.44.44 0 0 0 .7.336l.008.003 2.134-1.513a5.188 5.188 0 0 0-2.992-1.442l.148 2.615.002.001zM12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0z" />
-            </svg>
+            <img src="/kubernetes.png" alt="Kubernetes" className={className} style={{ objectFit: 'contain' }} />
         ),
         aws: (
             <svg viewBox="0 0 24 24" fill={iconColor} className={className}>
