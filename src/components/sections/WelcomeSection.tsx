@@ -51,9 +51,9 @@ const TechIcon = ({ name, color }: { name: string; color: string }) => {
 
 // Solar system orbits configuration
 const orbits = [
-    { radius: 120, icons: ['Docker', 'Kubernetes'], duration: 25, colors: ['#2496ED', '#326CE5'] },
-    { radius: 180, icons: ['AWS', 'Terraform', 'Python'], duration: 35, colors: ['#FF9900', '#7B42BC', '#3776AB'] },
-    { radius: 240, icons: ['Git', 'PostgreSQL', 'Redis'], duration: 45, colors: ['#F05032', '#336791', '#DC382D'] },
+    { radius: 160, icons: ['Docker', 'Kubernetes'], duration: 25, colors: ['#2496ED', '#326CE5'] },
+    { radius: 240, icons: ['AWS', 'Terraform', 'Python'], duration: 35, colors: ['#FF9900', '#7B42BC', '#3776AB'] },
+    { radius: 320, icons: ['Git', 'PostgreSQL', 'Redis'], duration: 45, colors: ['#F05032', '#336791', '#DC382D'] },
 ];
 
 export default function WelcomeSection() {
@@ -136,14 +136,16 @@ export default function WelcomeSection() {
                                     opacity: { delay: 0.5 + orbitIdx * 0.2 + iconIdx * 0.1, duration: 0.5 },
                                     rotate: { duration: orbit.duration, repeat: Infinity, ease: 'linear' }
                                 }}
-                                className="absolute p-2 rounded-xl bg-[rgba(22,27,34,0.8)] border border-white/10 backdrop-blur-sm shadow-lg hover:border-cyan-neon/50 hover:scale-110 transition-all cursor-pointer"
+                                className="absolute p-3 rounded-xl bg-[rgba(22,27,34,0.8)] border border-white/10 backdrop-blur-sm shadow-lg hover:border-cyan-neon/50 hover:scale-110 transition-all cursor-pointer"
                                 style={{
-                                    left: `calc(50% + ${x}px - 20px)`,
-                                    top: `calc(50% + ${y}px - 20px)`,
+                                    left: `calc(50% + ${x}px - 24px)`,
+                                    top: `calc(50% + ${y}px - 24px)`,
                                 }}
                                 whileHover={{ scale: 1.2 }}
                             >
-                                <TechIcon name={iconName} color={orbit.colors[iconIdx]} />
+                                <div className="w-8 h-8 flex items-center justify-center">
+                                    <TechIcon name={iconName} color={orbit.colors[iconIdx]} />
+                                </div>
                             </motion.div>
                         );
                     })}
@@ -174,11 +176,12 @@ export default function WelcomeSection() {
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ duration: 0.8, type: 'spring' }}
                     className="
-                        relative p-8 rounded-3xl
+                        relative p-12 rounded-3xl
                         bg-[rgba(22,27,34,0.85)]
                         backdrop-blur-xl
                         border border-cyan-neon/30
                         shadow-[0_20px_60px_rgba(0,0,0,0.5)]
+                        min-w-[320px]
                     "
                     style={{ transform: 'translateZ(30px)' }}
                 >
@@ -188,7 +191,7 @@ export default function WelcomeSection() {
                     {/* Profile Avatar */}
                     <motion.div
                         animate={{ y: isHovered ? -8 : 0 }}
-                        className="relative w-28 h-28 mx-auto mb-5"
+                        className="relative w-32 h-32 mx-auto mb-6"
                     >
                         <motion.div
                             animate={{

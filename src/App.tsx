@@ -32,8 +32,8 @@ function PortfolioContent() {
     }
   };
 
-  // Check if we're on the welcome page (no section selected)
-  const isWelcomePage = !currentSection;
+  // Check if we're on the welcome page (no section selected or 'home')
+  const isWelcomePage = !currentSection || currentSection === 'home';
 
   return (
     <>
