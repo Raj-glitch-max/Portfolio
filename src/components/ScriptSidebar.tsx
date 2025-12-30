@@ -96,8 +96,8 @@ function NavItem({
                 <div className="relative">
                     <Icon
                         className={`w-5 h-5 transition-all duration-300 ${isActive
-                                ? 'text-cyan-neon drop-shadow-[0_0_8px_rgba(0,217,255,0.8)]'
-                                : 'text-text-secondary group-hover:text-cyan-neon'
+                            ? 'text-cyan-neon drop-shadow-[0_0_8px_rgba(0,217,255,0.8)]'
+                            : 'text-text-secondary group-hover:text-cyan-neon'
                             }`}
                     />
                     {/* Pulse ring for active */}
@@ -120,8 +120,8 @@ function NavItem({
                 {/* Text */}
                 <span
                     className={`font-terminal text-sm transition-all duration-300 ${isActive
-                            ? 'text-cyan-neon text-glow-cyan'
-                            : 'text-text-secondary group-hover:text-white'
+                        ? 'text-cyan-neon text-glow-cyan'
+                        : 'text-text-secondary group-hover:text-white'
                         }`}
                 >
                     {script.name}
@@ -199,9 +199,8 @@ export default function ScriptSidebar() {
                     hidden md:flex md:flex-col
                     fixed left-0 top-0
                     w-[220px] h-screen
-                    bg-gradient-to-b from-[rgba(22,27,34,0.8)] via-[rgba(22,27,34,0.6)] to-[rgba(22,27,34,0.8)]
+                    bg-gradient-to-b from-[rgba(22,27,34,0.7)] via-[rgba(22,27,34,0.4)] to-[rgba(22,27,34,0.7)]
                     backdrop-blur-2xl backdrop-saturate-[180%]
-                    border-r border-cyan-neon/20
                     p-5
                     overflow-hidden
                     z-40

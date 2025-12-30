@@ -21,9 +21,8 @@ export default function ProfileSidebar() {
                 fixed right-0 top-0
                 w-full md:w-[280px]
                 h-screen
-                bg-[rgba(22,27,34,0.7)]
-                backdrop-blur-xl backdrop-saturate-[180%]
-                border-l border-cyan-neon/20
+                bg-gradient-to-b from-[rgba(22,27,34,0.6)] via-[rgba(22,27,34,0.4)] to-[rgba(22,27,34,0.6)]
+                backdrop-blur-2xl backdrop-saturate-[180%]
                 p-6
                 overflow-y-auto
                 z-40
