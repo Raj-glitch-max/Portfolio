@@ -4,7 +4,6 @@ import Homepage from './components/Homepage';
 import LoadingModal from './components/LoadingModal';
 import ProfileSidebar from './components/ProfileSidebar';
 import ScriptSidebar from './components/ScriptSidebar';
-import MainContentArea from './components/MainContentArea';
 import AboutSection from './components/sections/AboutSection';
 import SkillsSection from './components/sections/SkillsSection';
 import ProjectsSection from './components/sections/ProjectsSection';
@@ -33,6 +32,9 @@ function PortfolioContent() {
     }
   };
 
+  // Check if we're on the welcome page (no section selected)
+  const isWelcomePage = !currentSection;
+
   return (
     <>
       {/* Background Effects - Always Visible */}
@@ -46,18 +48,25 @@ function PortfolioContent() {
         // Homepage (before initialization)
         <Homepage />
       ) : (
-        // Portfolio Layout (after initialization) - 3-COLUMN LAYOUT
+        // Portfolio Layout (after initialization)
         <>
           {/* Left Sidebar - Scripts */}
           <ScriptSidebar />
 
-          {/* Right Sidebar - Profile */}
-          <ProfileSidebar />
+          {/* Right Sidebar - Profile (hidden on welcome page) */}
+          {!isWelcomePage && <ProfileSidebar />}
 
-          {/* Main Content Area - Center */}
-          <MainContentArea key={currentSection}>
-            {renderContent()}
-          </MainContentArea>
+          {/* Main Content Area - Center (full width on welcome page) */}
+          <main className={`
+            ml-0 md:ml-[200px]
+            ${isWelcomePage ? 'mr-0' : 'mr-0 md:mr-[280px]'}
+            min-h-screen
+            p-4 md:p-8
+          `}>
+            <div className={isWelcomePage ? '' : 'max-w-5xl mx-auto'}>
+              {renderContent()}
+            </div>
+          </main>
         </>
       )}
     </>
