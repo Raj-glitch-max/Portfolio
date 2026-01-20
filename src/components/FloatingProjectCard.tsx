@@ -108,7 +108,7 @@ export default function FloatingProjectCard({
                 <div
                     onClick={onClick}
                     className="
-                        relative w-full h-full min-h-[280px]
+                        relative w-full h-full min-h-[320px]
                         rounded-3xl
                         bg-gradient-to-br from-[rgba(22,27,34,0.7)] via-[rgba(22,27,34,0.5)] to-[rgba(22,27,34,0.3)]
                         backdrop-blur-xl
@@ -118,11 +118,21 @@ export default function FloatingProjectCard({
                         overflow-hidden
                         shadow-[0_8px_32px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.05)]
                         group-hover:shadow-[0_25px_70px_rgba(0,217,255,0.25),inset_0_1px_0_rgba(0,217,255,0.1)]
+                        flex flex-col
                     "
                     style={{
                         transform: 'translateZ(50px)',
                     }}
                 >
+                    {/* Subtle Dot Pattern Background */}
+                    <div
+                        className="absolute inset-0 opacity-[0.03] pointer-events-none"
+                        style={{
+                            backgroundImage: 'radial-gradient(#ffffff 1px, transparent 1px)',
+                            backgroundSize: '24px 24px'
+                        }}
+                    />
+
                     {/* Background gradient orb */}
                     <motion.div
                         animate={{
@@ -185,10 +195,10 @@ export default function FloatingProjectCard({
                         </>
                     )}
 
-                    {/* Content */}
-                    <div className="relative p-6 h-full flex flex-col justify-between z-10">
-                        {/* Top section */}
-                        <div>
+                    {/* Content Container */}
+                    <div className="relative p-6 flex-1 flex flex-col z-10">
+                        {/* Top section: Header */}
+                        <div className="mb-4">
                             {/* Project icon/emoji */}
                             <motion.div
                                 animate={{
@@ -196,32 +206,52 @@ export default function FloatingProjectCard({
                                     scale: isHovered ? 1.1 : 1,
                                 }}
                                 transition={{ duration: 0.5 }}
-                                className="text-4xl mb-4"
+                                className="text-4xl mb-4 inline-block"
                                 style={{ transform: 'translateZ(75px)' }}
                             >
                                 {project.icon || '🚀'}
                             </motion.div>
 
                             <motion.h3
-                                className="text-xl md:text-2xl font-terminal text-white mb-3 group-hover:text-cyan-neon transition-colors duration-300"
+                                className="text-xl md:text-2xl font-terminal text-white mb-2 group-hover:text-cyan-neon transition-colors duration-300"
                                 style={{ transform: 'translateZ(60px)' }}
                             >
                                 {project.name}
                             </motion.h3>
 
                             <motion.p
-                                className="text-sm text-text-secondary leading-relaxed line-clamp-3"
+                                className="text-sm text-text-secondary leading-relaxed line-clamp-2"
                                 style={{ transform: 'translateZ(40px)' }}
                             >
                                 {project.shortDescription}
                             </motion.p>
                         </div>
 
-                        {/* Bottom section */}
-                        <div className="space-y-4 mt-4">
+                        {/* Middle section: Key Features (Fills the empty space) */}
+                        <div className="flex-1 py-2">
+                            <div className="space-y-2.5">
+                                {project.features.slice(0, 3).map((feature, i) => (
+                                    <motion.div
+                                        key={i}
+                                        initial={{ opacity: 0.6, x: -5 }}
+                                        whileHover={{ opacity: 1, x: 0 }}
+                                        className="flex items-start gap-2.5 group/feature"
+                                        style={{ transform: 'translateZ(30px)' }}
+                                    >
+                                        <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-cyan-neon/40 group-hover/feature:bg-cyan-neon group-hover/feature:shadow-[0_0_8px_rgba(0,217,255,0.6)] transition-all duration-300" />
+                                        <p className="text-xs md:text-sm text-text-muted group-hover/feature:text-text-secondary transition-colors line-clamp-1">
+                                            {feature}
+                                        </p>
+                                    </motion.div>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Bottom section: Tech Stack & Actions */}
+                        <div className="mt-auto pt-4 border-t border-white/5">
                             {/* Tech stack pills */}
-                            <div className="flex flex-wrap gap-2">
-                                {project.techStack.slice(0, 4).map((tech, i) => (
+                            <div className="flex flex-wrap gap-2 mb-4">
+                                {project.techStack.slice(0, 3).map((tech, i) => (
                                     <motion.span
                                         key={tech}
                                         initial={{ opacity: 0, y: 10 }}
@@ -229,50 +259,49 @@ export default function FloatingProjectCard({
                                         transition={{ delay: index * 0.1 + i * 0.05 + 0.3 }}
                                         style={{ transform: 'translateZ(30px)' }}
                                         className="
-                                            px-3 py-1
-                                            text-xs font-mono
-                                            bg-cyan-neon/10
-                                            border border-cyan-neon/30
-                                            rounded-full
-                                            text-cyan-neon
-                                            backdrop-blur-sm
-                                            group-hover:bg-cyan-neon/20
-                                            group-hover:border-cyan-neon/50
+                                            px-2.5 py-1
+                                            text-[10px] md:text-xs font-mono
+                                            bg-cyan-neon/5
+                                            border border-cyan-neon/20
+                                            rounded-md
+                                            text-cyan-neon/80
+                                            group-hover:bg-cyan-neon/10
+                                            group-hover:border-cyan-neon/40
+                                            group-hover:text-cyan-neon
                                             transition-all duration-300
                                         "
                                     >
                                         {tech}
                                     </motion.span>
                                 ))}
-                                {project.techStack.length > 4 && (
-                                    <span className="px-3 py-1 text-xs font-mono text-text-muted">
-                                        +{project.techStack.length - 4}
+                                {project.techStack.length > 3 && (
+                                    <span className="px-2 py-1 text-[10px] md:text-xs font-mono text-text-muted/60 border border-transparent">
+                                        +{project.techStack.length - 3}
                                     </span>
                                 )}
                             </div>
 
-                            {/* Action buttons - Always visible on mobile, hover on desktop */}
+                            {/* Action buttons */}
                             <div className="flex gap-3 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-300">
                                 <motion.button
                                     whileHover={{ scale: 1.03 }}
                                     whileTap={{ scale: 0.97 }}
                                     style={{ transform: 'translateZ(50px)' }}
                                     className="
-                                        flex-1 py-2.5 px-4
-                                        bg-gradient-to-r from-cyan-neon/20 to-cyan-neon/10
-                                        border border-cyan-neon/50
-                                        rounded-xl
+                                        flex-1 py-2
+                                        bg-cyan-neon/10
+                                        border border-cyan-neon/40
+                                        rounded-lg
                                         text-cyan-neon
-                                        font-mono text-sm
-                                        hover:from-cyan-neon/30 hover:to-cyan-neon/20
-                                        hover:border-cyan-neon
+                                        font-mono text-xs font-bold
+                                        hover:bg-cyan-neon hover:text-deep-navy
                                         transition-all duration-300
                                         flex items-center justify-center gap-2
                                         backdrop-blur-sm
                                     "
                                 >
-                                    <ExternalLink className="w-4 h-4" />
-                                    View Details
+                                    <ExternalLink className="w-3.5 h-3.5" />
+                                    <span>Explore</span>
                                 </motion.button>
 
                                 <motion.a
@@ -283,28 +312,21 @@ export default function FloatingProjectCard({
                                     whileTap={{ scale: 0.9 }}
                                     style={{ transform: 'translateZ(50px)' }}
                                     className="
-                                        p-2.5
+                                        p-2
                                         bg-white/5
-                                        border border-white/20
-                                        rounded-xl
-                                        text-white
-                                        hover:border-cyan-neon
-                                        hover:text-cyan-neon
-                                        hover:bg-cyan-neon/10
+                                        border border-white/10
+                                        rounded-lg
+                                        text-white/70
+                                        hover:border-white/30
+                                        hover:text-white
+                                        hover:bg-white/10
                                         transition-all duration-300
                                         backdrop-blur-sm
                                     "
                                     onClick={(e) => e.stopPropagation()}
                                 >
-                                    <Github className="w-5 h-5" />
+                                    <Github className="w-4 h-4" />
                                 </motion.a>
-                            </div>
-
-                            {/* Mobile Tap Hint (Hand Icon) */}
-                            <div className="md:hidden absolute bottom-4 right-4 pointer-events-none opacity-50 animate-bounce">
-                                <div className="w-8 h-8 rounded-full bg-cyan-neon/20 flex items-center justify-center border border-cyan-neon/30">
-                                    <div className="w-2 h-2 bg-cyan-neon rounded-full" />
-                                </div>
                             </div>
                         </div>
                     </div>
@@ -318,7 +340,7 @@ export default function FloatingProjectCard({
                         transition={{ duration: 0.7, ease: 'easeOut' }}
                         className="
                             absolute inset-0
-                            bg-gradient-to-r from-transparent via-white/10 to-transparent
+                            bg-gradient-to-r from-transparent via-white/5 to-transparent
                             skew-x-12
                             pointer-events-none
                         "
@@ -327,7 +349,7 @@ export default function FloatingProjectCard({
                     {/* Glass reflection line */}
                     <div className="
                         absolute top-0 left-0 right-0 h-px
-                        bg-gradient-to-r from-transparent via-white/20 to-transparent
+                        bg-gradient-to-r from-transparent via-white/10 to-transparent
                     " />
                 </div>
             </motion.div>
