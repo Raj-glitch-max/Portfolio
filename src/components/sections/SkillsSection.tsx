@@ -88,6 +88,39 @@ export const TechIcons: Record<string, React.FC<{ className?: string }>> = {
             <path d="M16.606 4.016c-.238-.396-.762-.604-1.404-.604h-.004c-1.298 0-2.91.858-4.106 2.14-1.063 1.138-1.736 2.496-1.806 3.792-.02.352.022.684.114.994a2.762 2.762 0 0 0-.726.942c-.178.378-.266.79-.248 1.196.056 1.22.92 2.102 2.066 2.406v4.792l2.018-.538v-3.954c.476.04.966-.006 1.44-.146 1.488-.438 2.612-1.696 3.026-3.382.286-1.164.19-2.34-.266-3.216a3.314 3.314 0 0 0-.456-.65c.462-.864.576-1.826.356-2.772" />
         </svg>
     ),
+    'Azure': ({ className }) => (
+        <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+            <path d="M4.1 4h7.1v7.1H4.1V4zm0 8.8h7.1v7.1H4.1v-7.1zm8.8-8.8h7.1v7.1h-7.1V4zm0 8.8h7.1v7.1h-7.1v-7.1z" />
+        </svg>
+    ),
+    'GCP': ({ className }) => (
+        <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z" />
+        </svg>
+    ),
+    'React': ({ className }) => (
+        <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+            <circle cx="12" cy="12" r="2.5" />
+            <ellipse cx="12" cy="12" rx="10" ry="4" fill="none" stroke="currentColor" strokeWidth="1.5" />
+            <ellipse cx="12" cy="12" rx="10" ry="4" fill="none" stroke="currentColor" strokeWidth="1.5" transform="rotate(60 12 12)" />
+            <ellipse cx="12" cy="12" rx="10" ry="4" fill="none" stroke="currentColor" strokeWidth="1.5" transform="rotate(120 12 12)" />
+        </svg>
+    ),
+    'NodeJS': ({ className }) => (
+        <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 2l9 5v10l-9 5-9-5V7l9-5zm0 2.2L5.3 8v8l6.7 3.8 6.7-3.8V8L12 4.2z" />
+        </svg>
+    ),
+    'ArgoCD': ({ className }) => (
+        <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 0L2 6v12l10 6 10-6V6L12 0zm0 3.3l6.5 3.8L12 10.9l-6.5-3.8L12 3.3zM4.5 8.3L11 12v7.9l-6.5-3.9V8.3zm15 0v7.7l-6.5 3.9V12l6.5-3.7z" />
+        </svg>
+    ),
+    'Security': ({ className }) => (
+        <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 4l5 2.18V11c0 3.75-2.11 7.06-5 8.67-2.89-1.61-5-4.92-5-8.67V7.18L12 5z" />
+        </svg>
+    ),
     'Default': ({ className }) => (
         <svg className={className} viewBox="0 0 24 24" fill="currentColor">
             <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
@@ -115,36 +148,44 @@ const getIconForSkill = (skillName: string): React.FC<{ className?: string }> =>
     if (lowerName.includes('git') && !lowerName.includes('github')) return TechIcons['Git'];
     if (lowerName.includes('yaml')) return TechIcons['YAML'];
     if (lowerName.includes('dynamodb')) return TechIcons['DynamoDB'];
+    if (lowerName.includes('dynamodb')) return TechIcons['DynamoDB'];
+    if (lowerName.includes('azure')) return TechIcons['Azure'];
+    if (lowerName.includes('gcp') || lowerName.includes('google')) return TechIcons['GCP'];
+    if (lowerName.includes('react') || lowerName.includes('next')) return TechIcons['React'];
+    if (lowerName.includes('node') || lowerName.includes('express')) return TechIcons['NodeJS'];
+    if (lowerName.includes('argo') || lowerName.includes('gitops')) return TechIcons['ArgoCD'];
+    if (lowerName.includes('security') || lowerName.includes('tfsec') || lowerName.includes('checkov')) return TechIcons['Security'];
     return TechIcons['Default'];
 };
 
 // Skills data organized by category with proficiency levels
 const SKILLS_DATA = {
     'Cloud & Infrastructure': [
-        { name: 'AWS', items: ['EC2', 'S3', 'Lambda', 'IAM', 'VPC', 'CloudWatch', 'ECR', 'EKS'], level: 'Intermediate' },
-        { name: 'Linux', items: ['System Admin', 'Bash'], level: 'Intermediate' },
-        { name: 'Terraform', items: ['IaC', 'Modules'], level: 'Beginner' },
-        { name: 'Networking', items: ['Security', 'VPN'], level: 'Beginner' },
+        { name: 'AWS', items: ['EC2', 'S3', 'Lambda', 'IAM', 'VPC', 'EKS', 'SDK'], level: 'Intermediate' },
+        { name: 'Azure', items: ['AKS', 'VNet', 'Compute'], level: 'Beginner' },
+        { name: 'GCP', items: ['GKE', 'Cloud SQL', 'Compute'], level: 'Beginner' },
+        { name: 'Terraform', items: ['IaC', 'Modules', 'State Mgmt', 'Multi-Cloud'], level: 'Intermediate' },
+        { name: 'Linux', items: ['System Admin', 'Bash', 'Scripting'], level: 'Intermediate' },
     ],
     'DevOps & CI/CD': [
-        { name: 'Docker', items: ['Containers', 'Compose'], level: 'Intermediate' },
-        { name: 'Kubernetes', items: ['Pods', 'Services', 'Deployments'], level: 'Beginner' },
-        { name: 'Helm', items: ['Charts', 'Releases'], level: 'Beginner' },
+        { name: 'Docker', items: ['Containers', 'Compose', 'Optimization'], level: 'Intermediate' },
+        { name: 'Kubernetes', items: ['Pods', 'Services', 'Deployments', 'Operators'], level: 'Intermediate' },
+        { name: 'Jenkins', items: ['Pipelines', 'Shared Libs', 'Docker Agents'], level: 'Intermediate' },
+        { name: 'ArgoCD', items: ['GitOps', 'Sync', 'Rollouts'], level: 'Beginner' },
+        { name: 'DevSecOps', items: ['tfsec', 'Checkov', 'Infracost', 'SonarQube'], level: 'Beginner' },
         { name: 'GitHub Actions', items: ['Workflows', 'CI/CD'], level: 'Intermediate' },
-        { name: 'Jenkins', items: ['Pipelines'], level: 'Beginner' },
     ],
-    'Databases': [
-        { name: 'PostgreSQL', items: ['SQL'], level: 'Beginner' },
-        { name: 'MongoDB', items: ['NoSQL'], level: 'Beginner' },
-        { name: 'Redis', items: ['Caching'], level: 'Beginner' },
-        { name: 'DynamoDB', items: ['AWS'], level: 'Beginner' },
+    'Databases & Backend': [
+        { name: 'PostgreSQL', items: ['SQL', 'Optimization'], level: 'Intermediate' },
+        { name: 'Redis', items: ['Caching', 'Queues'], level: 'Beginner' },
+        { name: 'DynamoDB', items: ['NoSQL', 'Single Table'], level: 'Beginner' },
+        { name: 'Node.js', items: ['Express', 'REST API', 'Microservices'], level: 'Intermediate' },
     ],
     'Languages & Tools': [
-        { name: 'Python', items: ['Scripting', 'Automation'], level: 'Beginner' },
+        { name: 'Python', items: ['FastAPI', 'Automation', 'AI/LLM'], level: 'Intermediate' },
+        { name: 'React', items: ['Next.js', 'Hooks', 'Tailwind'], level: 'Intermediate' },
         { name: 'Bash', items: ['Shell Scripts'], level: 'Intermediate' },
-        { name: 'Java', items: ['Backend'], level: 'Beginner' },
-        { name: 'Git', items: ['Version Control'], level: 'Intermediate' },
-        { name: 'YAML', items: ['Config'], level: 'Intermediate' },
+        { name: 'Git', items: ['Version Control', 'Flow'], level: 'Intermediate' },
     ],
 };
 
