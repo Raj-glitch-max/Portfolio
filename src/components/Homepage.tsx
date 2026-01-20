@@ -23,7 +23,7 @@ export default function Homepage() {
             setCurrentSection(script.id);
             setShowModal(false);
             setIsInitialized(true);
-        }, 5000);
+        }, 4000);
     };
 
     const handleTitleClick = () => {
@@ -34,7 +34,7 @@ export default function Homepage() {
         setTimeout(() => {
             setShowModal(false);
             setIsInitialized(true);
-        }, 5000);
+        }, 4000);
     };
 
     return (
