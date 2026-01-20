@@ -179,11 +179,9 @@ const SKILLS_DATA = {
         { name: 'PostgreSQL', items: ['SQL', 'Optimization'], level: 'Intermediate' },
         { name: 'Redis', items: ['Caching', 'Queues'], level: 'Beginner' },
         { name: 'DynamoDB', items: ['NoSQL', 'Single Table'], level: 'Beginner' },
-        { name: 'Node.js', items: ['Express', 'REST API', 'Microservices'], level: 'Intermediate' },
     ],
     'Languages & Tools': [
         { name: 'Python', items: ['FastAPI', 'Automation', 'AI/LLM'], level: 'Intermediate' },
-        { name: 'React', items: ['Next.js', 'Hooks', 'Tailwind'], level: 'Intermediate' },
         { name: 'Bash', items: ['Shell Scripts'], level: 'Intermediate' },
         { name: 'Git', items: ['Version Control', 'Flow'], level: 'Intermediate' },
     ],
