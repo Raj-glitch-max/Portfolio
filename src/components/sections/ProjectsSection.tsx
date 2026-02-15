@@ -40,7 +40,7 @@ export default function ProjectsSection() {
     }, [selectedProject]);
 
     // Define card sizes for bento grid layout
-    const cardSizes: ('small' | 'medium' | 'large')[] = ['large', 'medium', 'medium', 'large', 'small', 'small', 'small'];
+    const cardSizes: ('small' | 'medium' | 'large')[] = ['large', 'large', 'medium', 'medium', 'large', 'small', 'small', 'small'];
 
     return (
         <>

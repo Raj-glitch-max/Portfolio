@@ -84,6 +84,37 @@ export const SOCIAL_LINKS: SocialLink[] = [
 
 export const PROJECTS: Project[] = [
     {
+        name: 'CodeArena',
+        shortDescription: 'Real-time competitive coding platform with microservices architecture and ELO-based ranking.',
+        fullDescription: 'CodeArena is a production-grade competitive programming platform where developers battle in real-time 1v1 or group matches. Players solve algorithmic challenges under time pressure while their code executes in sandboxed environments. The system features a microservices architecture with 5 backend services (Auth, Battle, Execution, Rating, WebSocket) deployed on Kubernetes. Built with zero-trust networking, aggressive horizontal pod autoscaling for execution workers, and full observability using Prometheus, Grafana, and Jaeger. The platform handles 100+ concurrent battles with sub-second WebSocket synchronization and maintains an ELO-based leaderboard system.',
+        techStack: ['React', 'Vite', 'TypeScript', 'Node.js', 'Express', 'PostgreSQL', 'Redis', 'RabbitMQ', 'Socket.IO', 'Docker', 'Kubernetes', 'Terraform', 'Prometheus', 'Grafana', 'Jaeger', 'Jenkins'],
+        features: [
+            'Real-time 1v1 and group battles with WebSocket synchronization',
+            'Microservices architecture: Auth, Battle, Execution, Rating, WebSocket services',
+            'Sandboxed code execution with RabbitMQ queue processing (10s timeout, 256MB limit)',
+            'ELO-based ranking system with live leaderboards',
+            'Zero-trust networking with Kubernetes NetworkPolicies',
+            'Aggressive HPA scaling: 5-30 replicas for execution workers during peak load',
+            'Full observability: Prometheus metrics, Grafana dashboards, Jaeger tracing',
+            'Production deployment on AWS EKS with RDS Multi-AZ and ElastiCache',
+        ],
+        achievements: [
+            'Built production-grade microservices with service mesh communication patterns',
+            'Implemented aggressive autoscaling handling 500-1000 execution jobs during peak hours',
+            'Deployed on AWS EKS with zero-downtime rolling updates via Jenkins CI/CD',
+            'Achieved sub-100ms WebSocket latency with Redis pub/sub across replicas',
+        ],
+        learningOutcomes: [
+            'Microservices communication patterns (REST, pub/sub, message queues)',
+            'Kubernetes production deployment and HPA scaling strategies',
+            'Real-time systems with Socket.IO and Redis pub/sub',
+            'Zero-trust networking and RBAC in Kubernetes',
+        ],
+        useCases: ['Competitive Programming Platforms', 'Real-time Gaming Infrastructure', 'Code Execution SaaS'],
+        githubUrl: 'https://github.com/Raj-glitch-max/CodeArena',
+        architecture: 'graph TB\n    Client[React SPA] --> Ingress[Nginx Ingress]\n    Ingress -->|/api/auth| Auth[Auth Service]\n    Ingress -->|/api/battle| Battle[Battle Service]\n    Ingress -->|/api/execution| Exec[Execution Service]\n    Ingress -->|/api/rating| Rating[Rating Service]\n    Ingress -->|ws://| WS[WebSocket Service]\n    Auth --> PG[(PostgreSQL)]\n    Auth --> Redis[(Redis)]\n    Battle --> PG\n    Battle --> Redis\n    Exec --> RMQ[RabbitMQ]\n    Rating --> PG\n    WS --> Redis',
+    },
+    {
         name: 'Terraform Multi-Cloud Infrastructure',
         shortDescription: 'Production-grade Infrastructure-as-Code (IaC) for AWS, Azure, and GCP with automated Jenkins CI/CD.',
         fullDescription: 'A comprehensive DevOps engineering project that automates the provisioning of enterprise-grade cloud infrastructure across three major providers: AWS (40%), Azure (30%), and GCP (30%). It utilizes modular Terraform code to deploy Kubernetes clusters (EKS, AKS, GKE), managed databases (RDS, Cloud SQL), and secure networking architectures. The project features a robust Jenkins CI/CD pipeline running in Docker that enforces DevSecOps best practices, including automated code validation, security scanning with tfsec and Checkov, cost estimation with Infracost, and manual approval gates for production deployments.',

@@ -24,6 +24,44 @@ export interface ArchitectureConfig {
 }
 
 export const PROJECT_ARCHITECTURES: Record<string, ArchitectureConfig> = {
+    'CodeArena': {
+        nodes: [
+            { id: 'client', label: 'React SPA', icon: 'react', x: 80, y: 200, delay: 0 },
+            { id: 'ingress', label: 'Nginx', icon: 'server', x: 220, y: 200, delay: 0.6 },
+            { id: 'auth', label: 'Auth Service', icon: 'api', x: 360, y: 80, delay: 1.2 },
+            { id: 'battle', label: 'Battle Service', icon: 'api', x: 360, y: 160, delay: 1.4 },
+            { id: 'exec', label: 'Execution', icon: 'docker', x: 360, y: 240, delay: 1.6 },
+            { id: 'rating', label: 'Rating', icon: 'api', x: 360, y: 320, delay: 1.8 },
+            { id: 'ws', label: 'WebSocket', icon: 'api', x: 360, y: 400, delay: 2.0 },
+            { id: 'postgres', label: 'PostgreSQL', icon: 'database', x: 540, y: 120, delay: 2.6 },
+            { id: 'redis', label: 'Redis', icon: 'redis', x: 540, y: 240, delay: 2.8 },
+            { id: 'rabbitmq', label: 'RabbitMQ', icon: 'kafka', x: 540, y: 360, delay: 3.0 },
+        ],
+        connections: [
+            { from: 'client', to: 'ingress', delay: 0.3 },
+            { from: 'ingress', to: 'auth', delay: 0.9 },
+            { from: 'ingress', to: 'battle', delay: 1.0 },
+            { from: 'ingress', to: 'exec', delay: 1.1 },
+            { from: 'ingress', to: 'rating', delay: 1.2 },
+            { from: 'ingress', to: 'ws', delay: 1.3 },
+            { from: 'auth', to: 'postgres', delay: 2.0 },
+            { from: 'auth', to: 'redis', delay: 2.1 },
+            { from: 'battle', to: 'postgres', delay: 2.2 },
+            { from: 'battle', to: 'redis', delay: 2.3 },
+            { from: 'exec', to: 'rabbitmq', delay: 2.4 },
+            { from: 'rating', to: 'postgres', delay: 2.5 },
+            { from: 'ws', to: 'redis', delay: 2.6 },
+        ],
+        duration: 5,
+        terminalCommands: [
+            '$ docker compose up --build',
+            '$ kubectl apply -f k8s/base/',
+            '$ kubectl apply -f k8s/monitoring/',
+            '$ kubectl get pods -n codearena',
+            '$ kubectl logs -f battle-service',
+            'Frontend: http://localhost:8083',
+        ],
+    },
     'Terraform Multi-Cloud Infrastructure': {
         nodes: [
             { id: 'github', label: 'GitHub', icon: 'github', x: 100, y: 200, delay: 0 },

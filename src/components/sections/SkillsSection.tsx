@@ -148,42 +148,66 @@ const getIconForSkill = (skillName: string): React.FC<{ className?: string }> =>
     if (lowerName.includes('git') && !lowerName.includes('github')) return TechIcons['Git'];
     if (lowerName.includes('yaml')) return TechIcons['YAML'];
     if (lowerName.includes('dynamodb')) return TechIcons['DynamoDB'];
-    if (lowerName.includes('dynamodb')) return TechIcons['DynamoDB'];
     if (lowerName.includes('azure')) return TechIcons['Azure'];
     if (lowerName.includes('gcp') || lowerName.includes('google')) return TechIcons['GCP'];
     if (lowerName.includes('react') || lowerName.includes('next')) return TechIcons['React'];
     if (lowerName.includes('node') || lowerName.includes('express')) return TechIcons['NodeJS'];
     if (lowerName.includes('argo') || lowerName.includes('gitops')) return TechIcons['ArgoCD'];
-    if (lowerName.includes('security') || lowerName.includes('tfsec') || lowerName.includes('checkov')) return TechIcons['Security'];
+    if (lowerName.includes('security') || lowerName.includes('tfsec') || lowerName.includes('checkov') || lowerName.includes('zero-trust')) return TechIcons['Security'];
+    if (lowerName.includes('rabbitmq')) return TechIcons['Default']; // Will use RabbitMQ icon from TechIcon
+    if (lowerName.includes('jaeger')) return TechIcons['Default']; // Will use Jaeger icon from TechIcon
+    if (lowerName.includes('ansible')) return TechIcons['Default']; // Will use Ansible icon from TechIcon
+    if (lowerName.includes('typescript')) return TechIcons['Default']; // Will use TypeScript icon from TechIcon
+    if (lowerName.includes('groovy')) return TechIcons['Default']; // Will use Groovy icon from TechIcon
+    if (lowerName.includes('oracle')) return TechIcons['Default']; // Will use Oracle icon from TechIcon
+    if (lowerName.includes('elasticache')) return TechIcons['Default']; // Will use ElastiCache icon from TechIcon
+    if (lowerName.includes('prometheus')) return TechIcons['Default']; // Will use Prometheus icon from TechIcon
+    if (lowerName.includes('grafana')) return TechIcons['Default']; // Will use Grafana icon from TechIcon
+    if (lowerName.includes('bull')) return TechIcons['Default']; // Will use default icon for Bull Queue
     return TechIcons['Default'];
 };
 
 // Skills data organized by category with proficiency levels
 const SKILLS_DATA = {
     'Cloud & Infrastructure': [
-        { name: 'AWS', items: ['EC2', 'S3', 'Lambda', 'IAM', 'VPC', 'EKS', 'SDK'], level: 'Intermediate' },
-        { name: 'Azure', items: ['AKS', 'VNet', 'Compute'], level: 'Beginner' },
-        { name: 'GCP', items: ['GKE', 'Cloud SQL', 'Compute'], level: 'Beginner' },
-        { name: 'Terraform', items: ['IaC', 'Modules', 'State Mgmt', 'Multi-Cloud'], level: 'Intermediate' },
-        { name: 'Linux', items: ['System Admin', 'Bash', 'Scripting'], level: 'Intermediate' },
+        { name: 'AWS', items: ['EC2', 'EKS', 'RDS Multi-AZ', 'ElastiCache', 'VPC', 'S3', 'Lambda', 'CloudWatch', 'IAM'], level: 'Intermediate' },
+        { name: 'GCP', items: ['GKE', 'Cloud SQL'], level: 'Beginner' },
+        { name: 'Oracle Cloud', items: ['Compute', 'Networking'], level: 'Beginner' },
+        { name: 'Terraform', items: ['Modules', 'Remote State', 'Workspaces'], level: 'Intermediate' },
+        { name: 'Ansible', items: ['Playbooks', 'Automation'], level: 'Beginner' },
     ],
-    'DevOps & CI/CD': [
-        { name: 'Docker', items: ['Containers', 'Compose', 'Optimization'], level: 'Intermediate' },
-        { name: 'Kubernetes', items: ['Pods', 'Services', 'Deployments', 'Operators'], level: 'Intermediate' },
-        { name: 'Jenkins', items: ['Pipelines', 'Shared Libs', 'Docker Agents'], level: 'Intermediate' },
+    'Containers & Orchestration': [
+        { name: 'Kubernetes', items: ['Deployments', 'StatefulSets', 'HPA', 'RBAC', 'NetworkPolicies'], level: 'Intermediate' },
+        { name: 'Docker', items: ['Containers', 'Multi-stage Builds', 'Compose'], level: 'Intermediate' },
+        { name: 'Helm', items: ['Charts', 'Releases'], level: 'Beginner' },
         { name: 'ArgoCD', items: ['GitOps', 'Sync', 'Rollouts'], level: 'Beginner' },
-        { name: 'DevSecOps', items: ['tfsec', 'Checkov', 'Infracost', 'SonarQube'], level: 'Beginner' },
-        { name: 'GitHub Actions', items: ['Workflows', 'CI/CD'], level: 'Intermediate' },
     ],
-    'Databases & Backend': [
-        { name: 'PostgreSQL', items: ['SQL', 'Optimization'], level: 'Intermediate' },
-        { name: 'Redis', items: ['Caching', 'Queues'], level: 'Beginner' },
-        { name: 'DynamoDB', items: ['NoSQL', 'Single Table'], level: 'Beginner' },
+    'CI/CD & Automation': [
+        { name: 'Jenkins', items: ['Pipelines', 'Groovy', 'Kubernetes Agents'], level: 'Intermediate' },
+        { name: 'GitHub Actions', items: ['Workflows', 'CI/CD', 'Automated Testing'], level: 'Intermediate' },
+        { name: 'GitOps', items: ['ArgoCD', 'Flux'], level: 'Beginner' },
     ],
-    'Languages & Tools': [
-        { name: 'Python', items: ['FastAPI', 'Automation', 'AI/LLM'], level: 'Intermediate' },
+    'Messaging & Data': [
+        { name: 'RabbitMQ', items: ['Queue Processing', 'Pub/Sub'], level: 'Beginner' },
+        { name: 'Redis', items: ['Pub/Sub', 'Caching'], level: 'Intermediate' },
+        { name: 'Bull Queue', items: ['Job Processing'], level: 'Beginner' },
+        { name: 'PostgreSQL', items: ['SQL', 'Optimization', 'Replication'], level: 'Intermediate' },
+        { name: 'ElastiCache', items: ['Redis', 'Clustering'], level: 'Beginner' },
+    ],
+    'Monitoring & Security': [
+        { name: 'Prometheus', items: ['Metrics', 'Alerts'], level: 'Intermediate' },
+        { name: 'Grafana', items: ['Dashboards', 'Visualization'], level: 'Intermediate' },
+        { name: 'Jaeger', items: ['Distributed Tracing'], level: 'Beginner' },
+        { name: 'Zero-Trust', items: ['NetworkPolicies', 'RBAC'], level: 'Beginner' },
+        { name: 'Security', items: ['tfsec', 'Checkov', 'VPC Flow Logs'], level: 'Beginner' },
+    ],
+    'Languages': [
+        { name: 'Python', items: ['Scripting', 'Automation'], level: 'Intermediate' },
         { name: 'Bash', items: ['Shell Scripts'], level: 'Intermediate' },
-        { name: 'Git', items: ['Version Control', 'Flow'], level: 'Intermediate' },
+        { name: 'Node.js', items: ['Backend', 'APIs'], level: 'Intermediate' },
+        { name: 'TypeScript', items: ['Type Safety', 'Frontend'], level: 'Intermediate' },
+        { name: 'YAML', items: ['Config', 'Manifests'], level: 'Intermediate' },
+        { name: 'Groovy', items: ['Jenkins Pipelines'], level: 'Beginner' },
     ],
 };
 
