@@ -1,25 +1,30 @@
 ---
 /**
- * The hero is a running cluster.
+ * The hero is a running cluster, in three dimensions, that you can break.
  *
- * Traffic actually flows. You can kill a pod. When you do, the failure
- * propagates the way it would in a real service graph — requests to the dead
- * replica error, the tier sheds load, errors climb. Then the agent wakes up,
- * sweeps the cluster for evidence, and produces a root cause.
+ * Traffic actually flows. Kill a pod and it stays in the service's endpoints,
+ * so it keeps taking its share of requests and those requests visibly fail.
+ * An agent then sweeps the cluster, collects evidence and reports a root cause
+ * — and then you delete the evidence and ask again, and the answer does not
+ * move. You caused the incident, so you already know what the truth was.
  *
- * Then you take the evidence away and ask it again, and it says the same thing.
- * That last beat is the entire research finding, and by then you have already
- * caused the incident yourself, so you know what the truth was.
- *
- * Canvas 2D, hand-written, no engine. Deferred so it never blocks first paint;
- * paused off-screen and on hidden tabs; a static poster frame under
- * prefers-reduced-motion.
+ * Rendered with hand-written WebGL: two hundred lines of renderer and seventy
+ * of matrix maths, rather than 150KB of engine to draw ten nodes. Deferred,
+ * paused off-screen and on hidden tabs, and under prefers-reduced-motion it
+ * runs no loop at all while the incident still resolves.
  */
 ---
 
 <div class="cx" data-cluster>
   <div class="cx__stage">
-    <canvas class="cx__canvas" data-canvas aria-hidden="true"></canvas>
+    <canvas class="cx__canvas" data-gl aria-hidden="true"></canvas>
+    <canvas class="cx__canvas" data-2d aria-hidden="true" hidden></canvas>
+    <div class="cx__labels" data-labels aria-hidden="true">
+      <span class="cx__lab" data-lab="0">ingress-nginx</span>
+      <span class="cx__lab" data-lab="1">api-gateway</span>
+      <span class="cx__lab" data-lab="2">checkout-api</span>
+      <span class="cx__lab" data-lab="3">postgres / redis</span>
+    </div>
 
     <p class="cx__fallback" data-fallback>
       A live service graph: ingress → api-gateway → checkout-api → postgres/redis,
@@ -56,9 +61,7 @@
     <div class="cx__panel cx__panel--rca" data-rcawrap hidden>
       <div class="cx__h">the agent's root cause</div>
       <p class="cx__rca" data-rca></p>
-      <div class="cx__conf">
-        <span>confidence</span><span data-conf>—</span>
-      </div>
+      <div class="cx__conf"><span>confidence</span><span data-conf>—</span></div>
       <button class="cx__b cx__b--key" data-ablate hidden>now delete the evidence and ask again</button>
       <output class="cx__verdict" data-verdict aria-live="polite"></output>
     </div>
@@ -68,21 +71,17 @@
 </div>
 
 <script>
+  import { m4, perspective, lookAt, mul, program, rgb } from '../lib/gl';
+
   type Phase = 'healthy' | 'failing' | 'investigating' | 'diagnosed' | 'ablated';
-  interface Pod { x: number; y: number; tier: number; i: number; name: string; health: number; dead: boolean; restarts: number; pulse: number; }
+  interface Pod { x: number; y: number; z: number; tier: number; i: number; health: number; dead: boolean; pulse: number; }
   interface P { from: Pod; to: Pod; t: number; speed: number; bad: boolean; }
 
-  const COL = {
-    ok: '#3fb8d4', warn: '#f0b429', bad: '#e05c5c', dim: '#2b3237',
-    text: '#6b7278', edge: 'rgba(255,255,255,.07)', evaluate: '#9d8cf5',
+  const C = {
+    ok: rgb('#3fb8d4'), bad: rgb('#e05c5c'), warn: rgb('#f0b429'),
+    eval: rgb('#9d8cf5'), edge: rgb('#39424a'),
   };
-
-  const TIERS = [
-    { label: 'ingress', n: 1, name: 'ingress-nginx' },
-    { label: 'gateway', n: 3, name: 'api-gateway' },
-    { label: 'checkout', n: 3, name: 'checkout-api' },
-    { label: 'data', n: 3, name: 'postgres/redis' },
-  ];
+  const TIERS = [{ n: 1 }, { n: 3 }, { n: 3 }, { n: 3 }];
 
   const FAULTS: Record<string, { label: string; target: number; evidence: string[][]; rca: string; conf: number }> = {
     oom: {
@@ -120,94 +119,154 @@
     },
   };
 
+  const VS = `
+    attribute vec3 aPos; attribute vec4 aCol; attribute float aSize;
+    uniform mat4 uMVP; uniform float uPix;
+    varying vec4 vCol;
+    void main() {
+      vec4 p = uMVP * vec4(aPos, 1.0);
+      gl_Position = p;
+      float fade = clamp(1.0 - (p.w - 4.5) / 11.0, 0.22, 1.0);
+      vCol = vec4(aCol.rgb, aCol.a * fade);
+      gl_PointSize = max(1.0, aSize * uPix / max(0.3, p.w));
+    }`;
+
+  const FS = `
+    precision mediump float;
+    varying vec4 vCol;
+    uniform int uMode;            // 0 line, 1 soft glow, 2 crisp ring
+    void main() {
+      float a = 1.0;
+      if (uMode > 0) {
+        float r = length(gl_PointCoord - 0.5) * 2.0;
+        if (uMode == 1) { a = smoothstep(1.0, 0.0, r); a *= a; }
+        else { a = smoothstep(0.70, 0.52, r) * smoothstep(0.24, 0.40, r); }
+      }
+      // Premultiplied additive. Alpha must carry the coverage too: a point
+      // sprite is a square quad, and writing alpha 1.0 for every fragment
+      // makes the transparent corners composite as an opaque black box.
+      float o = vCol.a * a;
+      gl_FragColor = vec4(vCol.rgb * o, o);
+    }`;
+
   const root = document.querySelector<HTMLElement>('[data-cluster]');
   if (root) init(root);
 
   function init(root: HTMLElement) {
-    const cv = root.querySelector<HTMLCanvasElement>('[data-canvas]')!;
-    const ctx = cv.getContext('2d')!;
+    const cvGL = root.querySelector<HTMLCanvasElement>('[data-gl]')!;
+    const cv2 = root.querySelector<HTMLCanvasElement>('[data-2d]')!;
+    let cv: HTMLCanvasElement = cvGL;
     const $ = <T extends Element>(s: string) => root.querySelector<T>(s)!;
-
-    const elRps = $<HTMLElement>('[data-rps]');
-    const elErr = $<HTMLElement>('[data-err]');
-    const elPhase = $<HTMLElement>('[data-phase]');
-    const elEv = $<HTMLElement>('[data-ev]');
-    const elEvCount = $<HTMLElement>('[data-evcount]');
-    const elEvTitle = $<HTMLElement>('[data-evtitle]');
-    const elRcaWrap = $<HTMLElement>('[data-rcawrap]');
-    const elRca = $<HTMLElement>('[data-rca]');
-    const elConf = $<HTMLElement>('[data-conf]');
-    const elAblate = $<HTMLButtonElement>('[data-ablate]');
-    const elVerdict = $<HTMLElement>('[data-verdict]');
-    const elReset = $<HTMLButtonElement>('[data-reset]');
     const elFallback = $<HTMLElement>('[data-fallback]');
 
+    let gl = cvGL.getContext('webgl', { antialias: true, alpha: true, premultipliedAlpha: true, powerPreference: 'low-power' }) as WebGLRenderingContext | null;
+    let prog = gl && program(gl, VS, FS);
+    let ctx: CanvasRenderingContext2D | null = null;
+
+    /**
+     * Fall back to rasterising the same 3D scene with Canvas 2D. Used when
+     * WebGL is unavailable, and when a live context is lost — which really
+     * happens: a GPU reset, a driver update, or a backgrounded mobile tab will
+     * take the context away, and a hero that silently turns into an empty box
+     * is worse than one that never had WebGL.
+     */
+    function fallback2D() {
+      if (ctx) return;
+      gl = null; prog = null;
+      cvGL.hidden = true; cv2.hidden = false;
+      cv = cv2;
+      ctx = cv2.getContext('2d');
+      if (!ctx) { cv2.hidden = true; elFallback.hidden = false; stop(); return; }
+      layout(); paint();
+    }
+
+    cvGL.addEventListener('webglcontextlost', (e) => { e.preventDefault(); fallback2D(); });
+    if (!gl || !prog) { fallback2D(); } else { elFallback.hidden = true; }
+
+    const elRps = $<HTMLElement>('[data-rps]'), elErr = $<HTMLElement>('[data-err]');
+    const elPhase = $<HTMLElement>('[data-phase]');
+    const elEv = $<HTMLElement>('[data-ev]'), elEvCount = $<HTMLElement>('[data-evcount]');
+    const elEvTitle = $<HTMLElement>('[data-evtitle]');
+    const elRcaWrap = $<HTMLElement>('[data-rcawrap]'), elRca = $<HTMLElement>('[data-rca]');
+    const elConf = $<HTMLElement>('[data-conf]'), elAblate = $<HTMLButtonElement>('[data-ablate]');
+    const elVerdict = $<HTMLElement>('[data-verdict]'), elReset = $<HTMLButtonElement>('[data-reset]');
+    const labs = [...root.querySelectorAll<HTMLElement>('.cx__lab')];
+
+    // GL plumbing, only when we actually have a context.
+    let aPos = -1, aCol = -1, aSize = -1, buf: WebGLBuffer | null = null;
+    let uMVP: WebGLUniformLocation | null = null, uPix: WebGLUniformLocation | null = null, uMode: WebGLUniformLocation | null = null;
+    if (gl && prog) {
+      aPos = gl.getAttribLocation(prog, 'aPos');
+      aCol = gl.getAttribLocation(prog, 'aCol');
+      aSize = gl.getAttribLocation(prog, 'aSize');
+      uMVP = gl.getUniformLocation(prog, 'uMVP');
+      uPix = gl.getUniformLocation(prog, 'uPix');
+      uMode = gl.getUniformLocation(prog, 'uMode');
+      buf = gl.createBuffer();
+      gl.useProgram(prog);
+      gl.disable(gl.DEPTH_TEST);
+      gl.enable(gl.BLEND);
+      gl.blendFunc(gl.ONE, gl.ONE);      // additive: overlap blooms
+      gl.clearColor(0, 0, 0, 0);
+    }
+
     const reduced = matchMedia('(prefers-reduced-motion: reduce)');
+    const proj = m4(), view = m4(), mvp = m4();
     let W = 0, H = 0, dpr = 1;
     let pods: Pod[] = [], parts: P[] = [];
     let phase: Phase = 'healthy';
     let fault: keyof typeof FAULTS | null = null;
-    let rps = 0, err = 0, errAcc = 0, okAcc = 0, sweep = -1, spawn = 0, last = 0, raf = 0, live = false;
+    let rps = 0, err = 0, errAcc = 0, okAcc = 0, sweep = -1, spawn = 0;
+    let last = 0, raf = 0, live = false;
+    let scrollP = 0, ptrX = 0, ptrY = 0, tgtX = 0, tgtY = 0;
+    let relayoutFrom: Map<string, Pod> | null = null;
+
+    function mk(x: number, y: number, z: number, tier: number, i: number): Pod {
+      const was = relayoutFrom?.get(tier + ':' + i);
+      return { x, y, z, tier, i, health: was?.health ?? 1, dead: was?.dead ?? false, pulse: was?.pulse ?? Math.random() * 6 };
+    }
 
     function layout() {
       const r = cv.getBoundingClientRect();
-      W = Math.max(320, r.width); H = Math.max(200, r.height);
+      W = Math.max(260, r.width); H = Math.max(200, r.height);
       dpr = Math.min(devicePixelRatio || 1, 2);
       cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      if (gl) gl.viewport(0, 0, cv.width, cv.height);
+      if (ctx) ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
       relayoutFrom = pods.length ? new Map(pods.map((p) => [p.tier + ':' + p.i, p])) : null;
       pods = [];
-      const padX = W < 560 ? 34 : 64;
-      const gap = (W - padX * 2) / (TIERS.length - 1);
       TIERS.forEach((t, ti) => {
-        const x = padX + gap * ti;
-        // Fill the frame: the graph was using barely a third of the canvas
-        // height, which read as empty space rather than as a system.
-        const mid = (H - 26) / 2;
-        const span = Math.min(H - 120, t.n * 82);
-        t.n === 1
-          ? pods.push(mk(x, mid, ti, 0, t.name))
-          : Array.from({ length: t.n }, (_, i) =>
-              pods.push(mk(x, mid - span / 2 + (span / (t.n - 1)) * i, ti, i, t.name)));
+        const x = (ti - (TIERS.length - 1) / 2) * 2.35;
+        if (t.n === 1) { pods.push(mk(x, 0, 0, ti, 0)); return; }
+        for (let i = 0; i < t.n; i++) {
+          const a = (i / t.n) * Math.PI * 2 + ti * 0.62;
+          pods.push(mk(x, Math.sin(a) * 1.18, Math.cos(a) * 1.18, ti, i));
+        }
       });
+      relayoutFrom = null;
     }
-
-    function mk(x: number, y: number, tier: number, i: number, name: string): Pod {
-      const was = relayoutFrom?.get(tier + ':' + i);
-      return {
-        x, y, tier, i, name,
-        health: was?.health ?? 1,
-        dead: was?.dead ?? false,
-        restarts: was?.restarts ?? 0,
-        pulse: was?.pulse ?? Math.random() * 6,
-      };
-    }
-    let relayoutFrom: Map<string, Pod> | null = null;
 
     const tierPods = (t: number) => pods.filter((p) => p.tier === t);
 
     function emit() {
-      const a = tierPods(0)[0];
-      const b = tierPods(1).filter((p) => !p.dead);
-      if (!b.length) return;
-      parts.push({ from: a, to: b[(Math.random() * b.length) | 0], t: 0, speed: 0.55 + Math.random() * 0.4, bad: false });
+      const a = tierPods(0)[0], b = tierPods(1);
+      if (a && b.length) parts.push({ from: a, to: b[(Math.random() * b.length) | 0], t: 0, speed: 0.5 + Math.random() * 0.4, bad: false });
     }
 
-    function advance(p: P) {
+    function advance(p: P): P | null {
       const next = tierPods(p.to.tier + 1);
       if (!next.length) return null;
       // A dead replica is still in the service's endpoints during the failure
-      // window, so it keeps taking its share of traffic. With three replicas
-      // and one dead that is a third of requests failing — route uniformly and
-      // let the error rate fall out of the simulation rather than asserting it.
+      // window, so it keeps taking its share. Route uniformly and let the error
+      // rate fall out of the simulation rather than asserting a number.
       const pick = next[(Math.random() * next.length) | 0];
-      return { from: p.to, to: pick, t: 0, speed: 0.55 + Math.random() * 0.4, bad: pick.dead } as P;
+      return { from: p.to, to: pick, t: 0, speed: 0.5 + Math.random() * 0.4, bad: pick.dead };
     }
 
-    function step(dt: number) {
+    function step(dt: number, now: number) {
       spawn += dt;
-      const rate = phase === 'healthy' ? 0.055 : 0.075;
+      const rate = phase === 'healthy' ? 0.05 : 0.07;
       while (spawn > rate) { spawn -= rate; emit(); }
 
       let bad = 0, ok = 0;
@@ -222,149 +281,267 @@
       });
       if (spawned.length) parts = parts.concat(spawned);
 
-      // A real ratio over a decaying window: failed / (failed + completed).
       const decay = Math.pow(0.5, dt / 1.5);
-      errAcc = errAcc * decay + bad;
-      okAcc = okAcc * decay + ok;
+      errAcc = errAcc * decay + bad; okAcc = okAcc * decay + ok;
       const total = errAcc + okAcc;
-      const target = total > 0.5 ? (errAcc / total) * 100 : 0;
-      err += (target - err) * Math.min(1, dt * 1.6);
-      rps += ((phase === 'healthy' ? 1240 : 980) + Math.sin(performance.now() / 900) * 60 - rps) * Math.min(1, dt * 2);
+      const tErr = total > 0.5 ? (errAcc / total) * 100 : 0;
+      err += (tErr - err) * Math.min(1, dt * 1.8);
+      rps += ((phase === 'healthy' ? 1240 : 980) + Math.sin(now / 900) * 60 - rps) * Math.min(1, dt * 2);
 
-      pods.forEach((p) => {
-        p.pulse += dt * (p.dead ? 5 : 1.6);
-        const want = p.dead ? 0 : 1;
-        p.health += (want - p.health) * Math.min(1, dt * 3);
-      });
-
-      if (sweep >= 0) {
-        sweep = Math.min(1.35, sweep + dt * 0.45);
+      for (const p of pods) {
+        p.pulse += dt * (p.dead ? 5 : 1.5);
+        p.health += ((p.dead ? 0 : 1) - p.health) * Math.min(1, dt * 3);
       }
+      if (sweep >= 0) sweep = Math.min(1.4, sweep + dt * 0.5);
+
+      ptrX += (tgtX - ptrX) * Math.min(1, dt * 3);
+      ptrY += (tgtY - ptrY) * Math.min(1, dt * 3);
 
       elRps.textContent = String(Math.round(rps));
       elErr.textContent = err.toFixed(1);
     }
 
-    function draw() {
-      ctx.clearRect(0, 0, W, H);
-      const showLabels = W > 520;
+    function camera(now: number) {
+      // Scroll flies the camera around the topology; the pointer adds parallax;
+      // a slow drift keeps it alive when nobody is doing anything.
+      const az = -0.42 + scrollP * 1.05 + Math.sin(now * 0.00012) * 0.11 + ptrX * 0.26;
+      const el = 0.14 + scrollP * 0.34 + Math.sin(now * 0.00017) * 0.03 + ptrY * 0.16;
+      const R = 7.5 + scrollP * 2.6;
+      const ce = Math.cos(el);
+      lookAt(view, [Math.sin(az) * ce * R, Math.sin(el) * R, Math.cos(az) * ce * R], [0, 0, 0], [0, 1, 0]);
+      perspective(proj, 0.82, W / H, 0.1, 60);
+      mul(mvp, proj, view);
+    }
 
-      // edges
-      ctx.lineWidth = 1;
+    /** @returns [screenX, screenY, w] where w is view depth, or null if behind. */
+    function project(x: number, y: number, z: number): [number, number, number] | null {
+      const m = mvp;
+      const cw = m[3] * x + m[7] * y + m[11] * z + m[15];
+      if (cw <= 0.01) return null;
+      const cx = m[0] * x + m[4] * y + m[8] * z + m[12];
+      const cy = m[1] * x + m[5] * y + m[9] * z + m[13];
+      return [(cx / cw * 0.5 + 0.5) * W, (1 - (cy / cw * 0.5 + 0.5)) * H, cw];
+    }
+
+    const lerp3 = (a: Pod, b: Pod, t: number): [number, number, number] =>
+      [a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t, a.z + (b.z - a.z) * t];
+
+    // ---------- WebGL renderer ----------
+
+    const vbuf: number[] = [];
+    const pushV = (arr: number[], x: number, y: number, z: number, c: number[], al: number, sz: number) =>
+      arr.push(x, y, z, c[0], c[1], c[2], al, sz);
+
+    function upload(data: number[], mode: number, prim: number) {
+      if (!gl || !data.length) return;
+      gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(data), gl.DYNAMIC_DRAW);
+      const S = 8 * 4;
+      gl.enableVertexAttribArray(aPos); gl.vertexAttribPointer(aPos, 3, gl.FLOAT, false, S, 0);
+      gl.enableVertexAttribArray(aCol); gl.vertexAttribPointer(aCol, 4, gl.FLOAT, false, S, 12);
+      gl.enableVertexAttribArray(aSize); gl.vertexAttribPointer(aSize, 1, gl.FLOAT, false, S, 28);
+      gl.uniform1i(uMode, mode);
+      gl.drawArrays(prim, 0, data.length / 8);
+    }
+
+    function drawGL() {
+      if (!gl) return;
+      gl.clear(gl.COLOR_BUFFER_BIT);
+      gl.uniformMatrix4fv(uMVP, false, mvp);
+      gl.uniform1f(uPix, cv.height * 0.92);
+
+      vbuf.length = 0;
       for (let t = 0; t < TIERS.length - 1; t++)
-        for (const a of tierPods(t))
-          for (const b of tierPods(t + 1)) {
-            ctx.strokeStyle = a.dead || b.dead ? 'rgba(224,92,92,.10)' : COL.edge;
-            ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
-          }
-
-      // particles
-      for (const p of parts) {
-        const x = p.from.x + (p.to.x - p.from.x) * p.t;
-        const y = p.from.y + (p.to.y - p.from.y) * p.t;
-        const c = p.bad ? COL.bad : COL.ok;
-        ctx.globalAlpha = p.bad ? 0.95 : 0.75;
-        ctx.strokeStyle = c; ctx.lineWidth = 1.6; ctx.lineCap = 'round';
-        const bx = p.from.x + (p.to.x - p.from.x) * Math.max(0, p.t - 0.09);
-        const by = p.from.y + (p.to.y - p.from.y) * Math.max(0, p.t - 0.09);
-        ctx.beginPath(); ctx.moveTo(bx, by); ctx.lineTo(x, y); ctx.stroke();
-        ctx.globalAlpha = 1;
-      }
-
-      // the investigation sweep
-      if (sweep >= 0) {
-        const sx = sweep * (W + 120) - 60;
-        const g = ctx.createLinearGradient(sx - 70, 0, sx + 10, 0);
-        g.addColorStop(0, 'rgba(157,140,245,0)');
-        g.addColorStop(1, 'rgba(157,140,245,.30)');
-        ctx.fillStyle = g; ctx.fillRect(sx - 70, 0, 80, H);
-        ctx.strokeStyle = COL.evaluate; ctx.globalAlpha = .75; ctx.lineWidth = 1;
-        ctx.beginPath(); ctx.moveTo(sx, 0); ctx.lineTo(sx, H); ctx.stroke(); ctx.globalAlpha = 1;
-      }
-
-      // pods
-      for (const p of pods) {
-        const r = 7;
-        const col = p.dead ? COL.bad : p.health < 0.85 ? COL.warn : COL.ok;
-        if (!p.dead) {
-          const a = 0.10 + Math.sin(p.pulse) * 0.05;
-          ctx.fillStyle = col; ctx.globalAlpha = a;
-          ctx.beginPath(); ctx.arc(p.x, p.y, r + 8, 0, 7); ctx.fill(); ctx.globalAlpha = 1;
-        } else {
-          const a = 0.22 + Math.sin(p.pulse) * 0.18;
-          ctx.fillStyle = COL.bad; ctx.globalAlpha = Math.max(0, a);
-          ctx.beginPath(); ctx.arc(p.x, p.y, r + 11, 0, 7); ctx.fill(); ctx.globalAlpha = 1;
+        for (const a of tierPods(t)) for (const b of tierPods(t + 1)) {
+          const hit = a.dead || b.dead, c = hit ? C.bad : C.edge, al = hit ? 0.26 : 0.30;
+          pushV(vbuf, a.x, a.y, a.z, c, al, 1); pushV(vbuf, b.x, b.y, b.z, c, al, 1);
         }
-        ctx.fillStyle = p.dead ? '#1a0d0d' : '#0d0f11';
-        ctx.strokeStyle = col; ctx.lineWidth = 1.5;
-        ctx.beginPath(); ctx.roundRect(p.x - r, p.y - r, r * 2, r * 2, 2.5); ctx.fill(); ctx.stroke();
+      for (const p of parts) {
+        const c = p.bad ? C.bad : C.ok;
+        const [ax, ay, az] = lerp3(p.from, p.to, Math.max(0, p.t - 0.13));
+        const [bx, by, bz] = lerp3(p.from, p.to, p.t);
+        pushV(vbuf, ax, ay, az, c, 0.05, 1);
+        pushV(vbuf, bx, by, bz, c, p.bad ? 1 : 0.85, 1);
+      }
+      upload(vbuf, 0, gl.LINES);
+
+      vbuf.length = 0;
+      for (const p of pods) {
+        const c = p.dead ? C.bad : p.health < 0.85 ? C.warn : C.ok;
+        const a = p.dead ? 0.30 + Math.sin(p.pulse) * 0.22 : 0.11 + Math.sin(p.pulse) * 0.035;
+        pushV(vbuf, p.x, p.y, p.z, c, Math.max(0.02, a), p.dead ? 0.66 : 0.5);
+      }
+      upload(vbuf, 1, gl.POINTS);
+
+      vbuf.length = 0;
+      for (const p of parts) {
+        const [x, y, z] = lerp3(p.from, p.to, p.t);
+        pushV(vbuf, x, y, z, p.bad ? C.bad : C.ok, p.bad ? 1 : 0.8, 0.055);
+      }
+      upload(vbuf, 1, gl.POINTS);
+
+      vbuf.length = 0;
+      for (const p of pods) {
+        const c = p.dead ? C.bad : p.health < 0.85 ? C.warn : C.ok;
+        pushV(vbuf, p.x, p.y, p.z, c, 1, 0.135);
+      }
+      upload(vbuf, 2, gl.POINTS);
+
+      if (sweep >= 0) {
+        vbuf.length = 0;
+        const sx = -4.6 + sweep * 9.2;
+        for (let k = 0; k <= 8; k++) {
+          const a = (k / 8) * Math.PI * 2;
+          pushV(vbuf, sx, Math.sin(a) * 1.75, Math.cos(a) * 1.75, C.eval, 0.5, 1);
+          pushV(vbuf, sx, Math.sin(a + 0.8) * 1.75, Math.cos(a + 0.8) * 1.75, C.eval, 0.12, 1);
+        }
+        upload(vbuf, 0, gl.LINES);
+      }
+    }
+
+    // ---------- Canvas 2D renderer: the same 3D scene, rasterised by hand ----------
+
+    const css = (c: number[], a: number) =>
+      `rgba(${(c[0] * 255) | 0},${(c[1] * 255) | 0},${(c[2] * 255) | 0},${a.toFixed(3)})`;
+    const depth = (w: number) => Math.max(0.22, Math.min(1, 1 - (w - 4.5) / 11));
+
+    function draw2D() {
+      if (!ctx) return;
+      ctx.clearRect(0, 0, W, H);
+      ctx.lineCap = 'round';
+
+      for (let t = 0; t < TIERS.length - 1; t++)
+        for (const a of tierPods(t)) for (const b of tierPods(t + 1)) {
+          const pa = project(a.x, a.y, a.z), pb = project(b.x, b.y, b.z);
+          if (!pa || !pb) continue;
+          const hit = a.dead || b.dead;
+          ctx.strokeStyle = css(hit ? C.bad : C.edge, (hit ? 0.3 : 0.34) * depth((pa[2] + pb[2]) / 2));
+          ctx.lineWidth = 1;
+          ctx.beginPath(); ctx.moveTo(pa[0], pa[1]); ctx.lineTo(pb[0], pb[1]); ctx.stroke();
+        }
+
+      for (const p of parts) {
+        const [ax, ay, az] = lerp3(p.from, p.to, Math.max(0, p.t - 0.13));
+        const [bx, by, bz] = lerp3(p.from, p.to, p.t);
+        const pa = project(ax, ay, az), pb = project(bx, by, bz);
+        if (!pa || !pb) continue;
+        const d = depth(pb[2]);
+        const g = ctx.createLinearGradient(pa[0], pa[1], pb[0], pb[1]);
+        g.addColorStop(0, css(p.bad ? C.bad : C.ok, 0));
+        g.addColorStop(1, css(p.bad ? C.bad : C.ok, (p.bad ? 1 : 0.85) * d));
+        ctx.strokeStyle = g; ctx.lineWidth = 1.7 * d;
+        ctx.beginPath(); ctx.moveTo(pa[0], pa[1]); ctx.lineTo(pb[0], pb[1]); ctx.stroke();
+      }
+
+      for (const p of pods) {
+        const s = project(p.x, p.y, p.z);
+        if (!s) continue;
+        const d = depth(s[2]), c = p.dead ? C.bad : p.health < 0.85 ? C.warn : C.ok;
+        const rad = (p.dead ? 30 : 23) * d, core = 7.5 * d;
+        const a = p.dead ? 0.34 + Math.sin(p.pulse) * 0.22 : 0.13 + Math.sin(p.pulse) * 0.04;
+        const g = ctx.createRadialGradient(s[0], s[1], 0, s[0], s[1], rad);
+        g.addColorStop(0, css(c, Math.max(0.02, a)));
+        g.addColorStop(1, css(c, 0));
+        ctx.fillStyle = g;
+        ctx.beginPath(); ctx.arc(s[0], s[1], rad, 0, 7); ctx.fill();
+        ctx.strokeStyle = css(c, d); ctx.lineWidth = 1.6;
+        ctx.beginPath(); ctx.arc(s[0], s[1], core, 0, 7); ctx.stroke();
         if (p.dead) {
-          ctx.strokeStyle = COL.bad; ctx.lineWidth = 1.2;
           ctx.beginPath();
-          ctx.moveTo(p.x - 3.5, p.y - 3.5); ctx.lineTo(p.x + 3.5, p.y + 3.5);
-          ctx.moveTo(p.x + 3.5, p.y - 3.5); ctx.lineTo(p.x - 3.5, p.y + 3.5);
+          ctx.moveTo(s[0] - core * .5, s[1] - core * .5); ctx.lineTo(s[0] + core * .5, s[1] + core * .5);
+          ctx.moveTo(s[0] + core * .5, s[1] - core * .5); ctx.lineTo(s[0] - core * .5, s[1] + core * .5);
           ctx.stroke();
         }
       }
 
-      // tier labels
-      if (showLabels) {
-        ctx.font = '10px ui-monospace, SFMono-Regular, Menlo, monospace';
-        ctx.textAlign = 'center';
-        TIERS.forEach((t, ti) => {
-          const p = tierPods(ti)[0];
-          const dead = tierPods(ti).some((x) => x.dead);
-          ctx.fillStyle = dead ? COL.bad : COL.text;
-          ctx.fillText(t.name, p.x, H - 14);
-        });
+      for (const p of parts) {
+        const [x, y, z] = lerp3(p.from, p.to, p.t);
+        const s = project(x, y, z);
+        if (!s) continue;
+        const d = depth(s[2]);
+        ctx.fillStyle = css(p.bad ? C.bad : C.ok, (p.bad ? 1 : 0.85) * d);
+        ctx.beginPath(); ctx.arc(s[0], s[1], 1.9 * d, 0, 7); ctx.fill();
+      }
+
+      if (sweep >= 0) {
+        const sx = -4.6 + sweep * 9.2;
+        ctx.strokeStyle = css(C.eval, 0.5); ctx.lineWidth = 1;
+        ctx.beginPath();
+        for (let k = 0; k <= 32; k++) {
+          const a = (k / 32) * Math.PI * 2;
+          const s = project(sx, Math.sin(a) * 1.75, Math.cos(a) * 1.75);
+          if (!s) continue;
+          k ? ctx.lineTo(s[0], s[1]) : ctx.moveTo(s[0], s[1]);
+        }
+        ctx.stroke();
+      }
+    }
+
+    /**
+     * A lost context is easy to detect; a context that survives but renders
+     * nothing is not, and that failure mode shows the visitor an empty box
+     * forever. So after the first few frames, read back a block of the
+     * framebuffer once: if WebGL drew nothing, fall back to 2D. readPixels is
+     * valid here because it runs inside the same frame as the draw.
+     */
+    let selfCheck = 0;
+    function verifyGL() {
+      if (!gl || selfCheck > 6) return;
+      if (++selfCheck < 6) return;
+      const w = Math.min(260, cv.width), h = Math.min(180, cv.height);
+      const x = Math.max(0, (cv.width - w) >> 1), y = Math.max(0, (cv.height - h) >> 1);
+      const px = new Uint8Array(w * h * 4);
+      gl.readPixels(x, y, w, h, gl.RGBA, gl.UNSIGNED_BYTE, px);
+      let lit = 0;
+      for (let i = 0; i < px.length; i += 4) if (px[i] + px[i + 1] + px[i + 2] > 12) { if (++lit > 24) return; }
+      fallback2D();
+    }
+
+    function draw(now: number) {
+      camera(now);
+      if (gl) { drawGL(); verifyGL(); } else { draw2D(); }
+      for (let ti = 0; ti < TIERS.length; ti++) {
+        const p = tierPods(ti)[0];
+        const s = p && project(p.x, -1.95, 0);
+        const el = labs[ti];
+        if (!s) { el.style.opacity = '0'; continue; }
+        el.style.opacity = '1';
+        el.style.transform = `translate(${s[0]}px, ${s[1]}px) translateX(-50%)`;
+        el.classList.toggle('is-hit', tierPods(ti).some((x) => x.dead));
       }
     }
 
     function loop(now: number) {
       const dt = Math.min(0.05, (now - last) / 1000 || 0);
       last = now;
-      step(dt); draw();
+      step(dt, now); draw(now);
       raf = requestAnimationFrame(loop);
     }
-
-    /** Repaint a single frame when the loop is not running. */
-    function paint() { if (!live) draw(); }
-
+    function paint() { if (!live) draw(performance.now()); }
     function start() { if (!live && !reduced.matches) { live = true; last = performance.now(); raf = requestAnimationFrame(loop); } }
-    function stop() { live = false; cancelAnimationFrame(raf); }
+    function stop() { if (live) { live = false; cancelAnimationFrame(raf); } }
 
     // ---- incident flow ----
 
-    function setPhase(p: Phase, label?: string) {
-      phase = p;
-      elPhase.textContent = label ?? p;
-      elPhase.dataset.p = p;
-    }
+    function setPhase(p: Phase, label?: string) { phase = p; elPhase.textContent = label ?? p; elPhase.dataset.p = p; }
 
     function inject(kind: keyof typeof FAULTS) {
       if (fault) return;
       fault = kind;
       const f = FAULTS[kind];
-      const victims = tierPods(f.target);
-      victims[0].dead = true;
-      if (kind === 'crash') victims[0].restarts = 7;
-
+      tierPods(f.target)[0].dead = true;
       setPhase('failing', f.label);
       root.querySelectorAll<HTMLButtonElement>('[data-fault]').forEach((b) => (b.disabled = true));
       elReset.hidden = false;
-
       elEvTitle.textContent = 'evidence';
       elEv.innerHTML = '<li class="cx__idle">agent investigating…</li>';
       elEvCount.textContent = '…';
-
       paint();
       setTimeout(() => {
-        setPhase('investigating');
-        sweep = 0;
-        paint();
-        // Fires on a timer, not on the render loop, so the incident still
-        // resolves if the canvas is paused while it is in flight.
-        setTimeout(() => { sweep = -1; diagnose(); }, reduced.matches ? 0 : 2600);
+        setPhase('investigating'); sweep = 0; paint();
+        // On a timer, not the render loop, so an incident still resolves if the
+        // canvas is paused while it is in flight.
+        setTimeout(() => { sweep = -1; diagnose(); }, reduced.matches ? 0 : 2800);
       }, 700);
     }
 
@@ -372,9 +549,7 @@
       if (!fault || phase === 'diagnosed' || phase === 'ablated') return;
       const f = FAULTS[fault];
       setPhase('diagnosed');
-      elEv.innerHTML = f.evidence
-        .map(([k, t]) => `<li class="cx__evi"><span>${k}</span>${t}</li>`)
-        .join('');
+      elEv.innerHTML = f.evidence.map(([k, t]) => `<li class="cx__evi"><span>${k}</span>${t}</li>`).join('');
       elEvCount.textContent = `${f.evidence.length} collected`;
       elRcaWrap.hidden = false;
       elRca.textContent = f.rca;
@@ -388,9 +563,7 @@
       const f = FAULTS[fault];
       setPhase('ablated');
       elEvTitle.textContent = 'evidence — withheld';
-      elEv.innerHTML = f.evidence
-        .map(([k, t]) => `<li class="cx__evi is-gone"><span>${k}</span>${t}</li>`)
-        .join('');
+      elEv.innerHTML = f.evidence.map(([k, t]) => `<li class="cx__evi is-gone"><span>${k}</span>${t}</li>`).join('');
       elEvCount.textContent = '0 of ' + f.evidence.length;
       elRca.textContent = f.rca;
       elConf.textContent = (f.conf - 0.02).toFixed(2);
@@ -404,18 +577,13 @@
 
     elReset.addEventListener('click', () => {
       fault = null; sweep = -1;
-      pods.forEach((p) => { p.dead = false; p.restarts = 0; });
+      pods.forEach((p) => (p.dead = false));
       parts = []; errAcc = 0; okAcc = 0;
-      setPhase('healthy');
-      paint();
+      setPhase('healthy'); paint();
       root.querySelectorAll<HTMLButtonElement>('[data-fault]').forEach((b) => (b.disabled = false));
-      elReset.hidden = true;
-      elRcaWrap.hidden = true;
-      elAblate.hidden = true;
-      elVerdict.className = 'cx__verdict';
-      elVerdict.textContent = '';
-      elEvTitle.textContent = 'evidence';
-      elEvCount.textContent = '—';
+      elReset.hidden = true; elRcaWrap.hidden = true; elAblate.hidden = true;
+      elVerdict.className = 'cx__verdict'; elVerdict.textContent = '';
+      elEvTitle.textContent = 'evidence'; elEvCount.textContent = '—';
       elEv.innerHTML = '<li class="cx__idle">waiting for an incident</li>';
     });
 
@@ -424,12 +592,25 @@
 
     // ---- lifecycle ----
 
-    layout();
-    elFallback.hidden = true;
-    draw();
+    function onScroll() {
+      const r = root.getBoundingClientRect();
+      const span = innerHeight + r.height;
+      scrollP = Math.max(0, Math.min(1, (innerHeight - r.top) / span));
+    }
 
-    new ResizeObserver(() => { layout(); if (!live) draw(); }).observe(cv);
-    new IntersectionObserver((e) => (e[0].isIntersecting ? start() : stop()), { threshold: 0.05 }).observe(cv);
+    layout(); onScroll(); draw(performance.now());
+
+
+
+    const stage = root.querySelector<HTMLElement>('.cx__stage')!;
+    new ResizeObserver(() => { layout(); paint(); }).observe(stage);
+    new IntersectionObserver((e) => (e[0].isIntersecting ? start() : stop()), { threshold: 0.02 }).observe(stage);
+    addEventListener('scroll', onScroll, { passive: true });
+    addEventListener('pointermove', (e) => {
+      const r = stage.getBoundingClientRect();
+      tgtX = Math.max(-1, Math.min(1, (e.clientX - r.left - r.width / 2) / (r.width / 2)));
+      tgtY = Math.max(-1, Math.min(1, (e.clientY - r.top - r.height / 2) / (r.height / 2)));
+    }, { passive: true });
     document.addEventListener('visibilitychange', () => (document.hidden ? stop() : start()));
     reduced.addEventListener('change', () => (reduced.matches ? stop() : start()));
   }
@@ -443,16 +624,24 @@
   }
   @media (min-width: 60rem) { .cx { grid-template-columns: 1.55fr 1fr; } }
 
-  .cx__stage { position: relative; min-height: 300px; }
-  @media (min-width: 60rem) { .cx__stage { min-height: 420px; } }
+  .cx__stage { position: relative; min-height: 320px; }
+  @media (min-width: 60rem) { .cx__stage { min-height: 460px; } }
   .cx__canvas { display: block; width: 100%; height: 100%; position: absolute; inset: 0; }
+
+  .cx__labels { position: absolute; inset: 0; pointer-events: none; }
+  .cx__lab {
+    position: absolute; top: 0; left: 0;
+    font-family: var(--mono); font-size: .625rem; letter-spacing: .08em;
+    color: var(--text-faint); white-space: nowrap;
+    transition: color .3s, opacity .3s; will-change: transform;
+  }
+  .cx__lab.is-hit { color: #e05c5c; }
 
   .cx__fallback { margin: 0; padding: 1.25rem; color: var(--text-dim); font-size: .875rem; }
 
   .cx__hud {
     position: absolute; top: .75rem; left: .875rem; display: flex; gap: .875rem;
-    font-family: var(--mono); font-size: .6875rem; color: var(--text-faint);
-    pointer-events: none;
+    font-family: var(--mono); font-size: .6875rem; color: var(--text-faint); pointer-events: none;
   }
   .cx__stat b { color: var(--text); font-weight: 500; }
   .cx__stat--phase {
@@ -461,7 +650,7 @@
   }
   .cx__stat--phase[data-p='healthy'] { color: var(--act); border-color: color-mix(in srgb, var(--act) 40%, transparent); }
   .cx__stat--phase[data-p='failing'] { color: #e05c5c; border-color: #5c2a2a; }
-  .cx__stat--phase[data-p='investigating'] { color: var(--evaluate); border-color: #453a6b; }
+  .cx__stat--phase[data-p='investigating'],
   .cx__stat--phase[data-p='diagnosed'],
   .cx__stat--phase[data-p='ablated'] { color: var(--evaluate); border-color: #453a6b; }
 
@@ -493,7 +682,6 @@
   .cx__b--key:hover:not(:disabled) { color: #c4b8ff; border-color: var(--evaluate); }
 
   .cx__panel { margin-top: 1.25rem; }
-
   .cx__ev { list-style: none; margin: 0; padding: 0; font-family: var(--mono); font-size: .6875rem; min-height: 5.5rem; }
   .cx__idle { color: var(--text-faint); font-style: italic; }
   :global(.cx__evi) {
@@ -501,14 +689,10 @@
     border-bottom: 1px dashed rgba(255,255,255,.05);
   }
   :global(.cx__evi span) { flex: none; width: 3rem; color: var(--text-faint); text-transform: uppercase; font-size: .625rem; padding-top: .1rem; }
-  :global(.cx__evi.is-gone) { opacity: .26; }
-  :global(.cx__evi.is-gone) { text-decoration: line-through; text-decoration-color: #7a3030; }
+  :global(.cx__evi.is-gone) { opacity: .26; text-decoration: line-through; text-decoration-color: #7a3030; }
 
   .cx__rca { margin: 0 0 .75rem; font-size: .875rem; line-height: 1.5; color: var(--text); }
-  .cx__conf {
-    display: flex; justify-content: space-between;
-    font-family: var(--mono); font-size: .6875rem; color: var(--text-faint);
-  }
+  .cx__conf { display: flex; justify-content: space-between; font-family: var(--mono); font-size: .6875rem; color: var(--text-faint); }
   .cx__conf span:last-child { color: var(--text); }
 
   .cx__verdict { display: none; }
@@ -517,8 +701,8 @@
     background: #16090b; border-left: 2px solid #7a3030; border-radius: 0 4px 4px 0;
     font-size: .8125rem; line-height: 1.55; color: var(--text-dim);
   }
-  .cx__verdict b { color: #e88b8b; }
-  .cx__verdict span { display: block; margin-top: .5rem; font-family: var(--mono); font-size: .6875rem; color: var(--text-faint); }
+  :global(.cx__verdict) b { color: #e88b8b; }
+  :global(.cx__verdict) span { display: block; margin-top: .5rem; font-family: var(--mono); font-size: .6875rem; color: var(--text-faint); }
 
   .cx__reset {
     margin-top: 1rem; font: inherit; font-family: var(--mono); font-size: .6875rem;

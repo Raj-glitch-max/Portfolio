@@ -55,6 +55,23 @@ npm run budget   # fails on regression
 Static output in `dist/`. Cloudflare Pages: build `npm run build`, output
 `site/dist`. `public/_headers` is Pages/Netlify syntax.
 
+## The renderer
+
+`src/components/Cluster.astro` renders the hero with hand-written WebGL — two
+shader programs and ~70 lines of matrix maths in `src/lib/gl.ts`, rather than
+150KB of engine to draw ten nodes and sixty particles.
+
+It carries a Canvas 2D rasteriser of the *same* 3D scene, used when WebGL is
+unavailable, when a live context is lost (`webglcontextlost` — a GPU reset or a
+backgrounded mobile tab really does take it away), and when a self-check finds
+that GL is alive but drawing nothing. That last case is the one worth having:
+a context that survives but renders an empty box is invisible to every other
+kind of error handling, so after a few frames the renderer reads back a block
+of its own framebuffer and falls back if it is blank.
+
+Tier labels are real HTML tracking projected 3D positions, so they stay crisp
+at any DPI.
+
 ## The simulation
 
 `src/components/Cluster.astro` is the homepage hero. It is a real simulation,
