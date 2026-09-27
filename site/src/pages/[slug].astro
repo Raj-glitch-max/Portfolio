@@ -4,8 +4,9 @@ import ProjectHeader from '../components/ProjectHeader.astro';
 import { PROJECTS } from '../data/site';
 
 export function getStaticPaths() {
-  // /klrb has its own page — it carries the interactive demo.
-  return PROJECTS.filter((p) => p.slug !== 'klrb').map((p) => ({
+  // /klrb and /atlas have their own pages — they carry the interactive demos.
+  const OWN = new Set(['klrb', 'atlas']);
+  return PROJECTS.filter((p) => !OWN.has(p.slug)).map((p) => ({
     params: { slug: p.slug },
     props: { p },
   }));

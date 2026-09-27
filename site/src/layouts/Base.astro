@@ -8,8 +8,12 @@ interface Props {
   /** Plane accent for this page, drives --c. */
   accent?: 'authorize' | 'act' | 'evaluate' | 'attribute';
   path?: string;
+  /** Link-preview card basename in /og. Defaults to the path segment. */
+  og?: string;
 }
-const { title, description, accent, path = '' } = Astro.props;
+const { title, description, accent, path = '', og } = Astro.props;
+const ogCard = og ?? (path === '/' || !path ? 'index' : path.replace(/^\//, ''));
+const ogUrl = `https://${PROFILE.domain}/og/${ogCard}.png`;
 const canonical = `https://${PROFILE.domain}${path}`;
 const fullTitle = path === '/' ? `${PROFILE.name} — ${PROFILE.title}` : `${title} · ${PROFILE.name}`;
 
@@ -42,9 +46,14 @@ const jsonld = {
   <meta property="og:description" content={description} />
   <meta property="og:url" content={canonical} />
   <meta property="og:site_name" content={PROFILE.domain} />
+  <meta property="og:image" content={ogUrl} />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:image:alt" content={description} />
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content={fullTitle} />
   <meta name="twitter:description" content={description} />
+  <meta name="twitter:image" content={ogUrl} />
 
   <meta name="theme-color" content="#08090a" />
   <link rel="icon" href="/favicon.svg" type="image/svg+xml" />

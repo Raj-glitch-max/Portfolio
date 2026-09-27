@@ -1,0 +1,175 @@
+---
+/**
+ * Atlas in five seconds: a holder can always narrow a capability it holds,
+ * and can never widen one. Saying that takes a sentence nobody reads; doing
+ * it takes four clicks.
+ *
+ * Every element is rendered server-side and toggled by class, so nothing is
+ * built with innerHTML and the scoped styles all apply.
+ */
+const CAVEATS = [
+  { id: 'ns',   btn: 'restrict to namespace',  caveat: 'ns == payments',              scope: 'k8s:* · ns=payments' },
+  { id: 'act',  btn: 'restrict to one action', caveat: 'action == restart',           scope: 'k8s:restart · ns=payments' },
+  { id: 'res',  btn: 'restrict to one pod',    caveat: 'resource == checkout-api',    scope: 'k8s:restart · payments/checkout-api' },
+  { id: 'ttl',  btn: 'shorten the TTL',        caveat: 'exp <= now + 60s',            scope: 'k8s:restart · payments/checkout-api · 60s' },
+];
+---
+
+<div class="at">
+  <div class="at__token">
+    <div class="at__head">
+      <span>delegation token</span>
+      <span class="at__gen" data-gen>generation 0</span>
+    </div>
+
+    <dl class="at__kv">
+      <dt>subject</dt>
+      <dd>spiffe://rajpatil.dev/ns/payments/sa/aisre-agent</dd>
+      <dt>effective</dt>
+      <dd class="at__scope" data-scope>k8s:* · everywhere · 15m</dd>
+    </dl>
+
+    <div class="at__cav">
+      <span class="at__cav-h">caveats</span>
+      <p class="at__none" data-none>none — this token can do anything the issuer could</p>
+      <ul class="at__list">
+        {CAVEATS.map((c) => (
+          <li class="at__item" data-cav={c.id}><span>+</span>{c.caveat}</li>
+        ))}
+      </ul>
+    </div>
+  </div>
+
+  <div class="at__actions">
+    <span class="at__actions-h">attenuate</span>
+    <div class="at__btns">
+      {CAVEATS.map((c) => (
+        <button class="at__b" data-add={c.id} data-scope={c.scope}>{c.btn}</button>
+      ))}
+    </div>
+
+    <span class="at__actions-h" style="margin-top:1rem">widen</span>
+    <div class="at__btns">
+      <button class="at__b at__b--bad" data-widen>grant k8s:delete as well</button>
+      <button class="at__b at__b--bad" data-widen>drop the namespace caveat</button>
+    </div>
+
+    <output class="at__refuse" data-refuse aria-live="polite"></output>
+    <button class="at__reset" data-reset hidden>reset the token</button>
+  </div>
+</div>
+
+<script is:inline>
+  (function () {
+    const r = document.querySelector('.at');
+    if (!r) return;
+    const scope = r.querySelector('[data-scope]');
+    const gen = r.querySelector('[data-gen]');
+    const none = r.querySelector('[data-none]');
+    const refuse = r.querySelector('[data-refuse]');
+    const reset = r.querySelector('[data-reset]');
+    const base = scope.textContent;
+    let n = 0;
+
+    r.querySelectorAll('[data-add]').forEach((b) => {
+      b.addEventListener('click', () => {
+        if (b.disabled) return;
+        b.disabled = true;
+        r.querySelector('[data-cav="' + b.dataset.add + '"]').classList.add('is-on');
+        scope.textContent = b.dataset.scope;
+        gen.textContent = 'generation ' + ++n;
+        none.hidden = true;
+        refuse.className = 'at__refuse';
+        refuse.textContent = '';
+        reset.hidden = false;
+      });
+    });
+
+    r.querySelectorAll('[data-widen]').forEach((b) => {
+      b.addEventListener('click', () => {
+        refuse.className = 'at__refuse is-shown';
+        refuse.innerHTML =
+          '<b>Rejected — and not by policy.</b> Each generation is signed over the one before it, so a holder can append a caveat but cannot remove one or re-sign without the issuer key. ' +
+          'The verifier replays every caveat in the chain offline; a token missing one simply fails verification. ' +
+          '<span>Widening is not forbidden here. It is unrepresentable.</span>';
+      });
+    });
+
+    reset.addEventListener('click', () => {
+      n = 0;
+      scope.textContent = base;
+      gen.textContent = 'generation 0';
+      none.hidden = false;
+      reset.hidden = true;
+      refuse.className = 'at__refuse';
+      refuse.textContent = '';
+      r.querySelectorAll('[data-add]').forEach((x) => (x.disabled = false));
+      r.querySelectorAll('.at__item').forEach((x) => x.classList.remove('is-on'));
+    });
+  })();
+</script>
+
+<style>
+  .at {
+    display: grid; gap: 0;
+    border: 1px solid var(--line); border-radius: var(--r);
+    background: var(--surface); overflow: hidden;
+  }
+  @media (min-width: 52rem) { .at { grid-template-columns: 1.2fr 1fr; } }
+
+  .at__token { padding: 1.125rem 1.25rem 1.375rem; }
+  .at__actions { padding: 1.125rem 1.25rem 1.375rem; border-top: 1px solid var(--line); }
+  @media (min-width: 52rem) { .at__actions { border-top: 0; border-left: 1px solid var(--line); } }
+
+  .at__head, .at__actions-h, .at__cav-h {
+    display: flex; justify-content: space-between;
+    font-family: var(--mono); font-size: .6875rem; letter-spacing: .1em;
+    text-transform: uppercase; color: var(--text-faint);
+  }
+  .at__head { margin-bottom: .875rem; }
+  .at__gen { color: var(--authorize); }
+  .at__actions-h, .at__cav-h { display: block; margin-bottom: .625rem; }
+
+  .at__kv { display: grid; grid-template-columns: 5.5rem 1fr; gap: .375rem .75rem; margin: 0 0 1.25rem; }
+  .at__kv dt { font-family: var(--mono); font-size: .6875rem; color: var(--text-faint); text-transform: uppercase; letter-spacing: .06em; padding-top: .1rem; }
+  .at__kv dd { margin: 0; font-family: var(--mono); font-size: .75rem; color: var(--text-dim); overflow-wrap: anywhere; }
+  .at__scope { color: var(--authorize) !important; }
+
+  .at__none { margin: 0; font-family: var(--mono); font-size: .75rem; color: var(--text-faint); font-style: italic; }
+  .at__list { list-style: none; margin: 0; padding: 0; }
+  .at__item {
+    display: none; gap: .5rem; align-items: baseline;
+    font-family: var(--mono); font-size: .75rem; color: var(--text-dim);
+    padding: .2rem 0;
+  }
+  .at__item.is-on { display: flex; }
+  .at__item span { color: var(--attribute); }
+
+  .at__btns { display: flex; flex-wrap: wrap; gap: .5rem; }
+  .at__b {
+    font: inherit; font-family: var(--mono); font-size: .75rem;
+    padding: .375rem .625rem; border-radius: 4px; cursor: pointer;
+    background: var(--surface-2); color: var(--text-dim);
+    border: 1px solid var(--line-bright);
+    transition: color .15s, border-color .15s, background .15s;
+  }
+  .at__b:hover:not(:disabled) { color: var(--text); border-color: var(--authorize); }
+  .at__b:disabled { opacity: .35; cursor: default; text-decoration: line-through; }
+  .at__b--bad:hover { border-color: #7a3030; color: #e88b8b; }
+
+  .at__refuse { display: none; }
+  .at__refuse.is-shown {
+    display: block; margin-top: 1rem; padding: .75rem .875rem;
+    background: #16090b; border-left: 2px solid #7a3030; border-radius: 0 4px 4px 0;
+    font-size: .875rem; line-height: 1.55; color: var(--text-dim);
+  }
+  .at__refuse b { color: #e88b8b; }
+  .at__refuse span { display: block; margin-top: .5rem; font-family: var(--mono); font-size: .75rem; color: var(--text-faint); }
+
+  .at__reset {
+    margin-top: 1rem; font: inherit; font-family: var(--mono); font-size: .6875rem;
+    background: none; border: 0; padding: 0; cursor: pointer;
+    color: var(--text-faint); text-decoration: underline; text-underline-offset: 3px;
+  }
+  .at__reset:hover { color: var(--text); }
+</style>
