@@ -1,0 +1,136 @@
+---
+/**
+ * The hero is not a hero. It is the architecture of a system that exists.
+ *
+ * Atlas gates what the agent may call. AISRE is the agent. KLRB judges whether
+ * the agent's conclusion was grounded. Those edges are real — Atlas enforces
+ * least privilege on every tool call inside AISRE, and KLRB is designed in as
+ * its RCA evaluator. Nothing is drawn here for decoration.
+ *
+ * Built from HTML rather than SVG on purpose: SVG text scales with the viewBox,
+ * so on a 390px phone it renders at ~6px. Real elements reflow and stay legible.
+ * Still zero JavaScript — every state below is CSS.
+ */
+const NODES = [
+  {
+    href: '/atlas', name: 'Atlas', plane: 'authorize',
+    desc: 'Scoped, attenuable capability tokens bound to SPIFFE workload identity. Verified fully offline.',
+    meta: 'Go · SPIRE · gRPC · MCP', stars: 40,
+    edge: 'scoped token · no network hop on the auth path',
+  },
+  {
+    href: '/aisre', name: 'AISRE', plane: 'act',
+    desc: 'Detects a live failure, investigates with a three-tool agent, proposes a root cause.',
+    meta: 'Python · Nemotron · Flask', stars: null,
+    edge: 'structured-JSON root cause',
+    gate: 'no remediation without human approval',
+  },
+  {
+    href: '/klrb', name: 'KLRB', plane: 'evaluate',
+    desc: 'Did the model read the cluster evidence, or guess confidently without it?',
+    meta: 'Python · Kubernetes · chaos', stars: 96,
+    edge: null,
+  },
+];
+---
+
+<figure class="cp" aria-label="The control plane: a request is authorized by Atlas, acted on by AISRE behind a human approval gate, then evaluated by KLRB.">
+  <p class="cp__cap">a request from an AI agent</p>
+
+  {NODES.map((n) => (
+    <>
+      <span class="cp__wire" aria-hidden="true"></span>
+
+      <a class={`cp__node cp__node--${n.plane}`} href={n.href}>
+        <span class="cp__row">
+          <span class="cp__name">{n.name}</span>
+          <span class="cp__plane">{n.plane}</span>
+        </span>
+        <span class="cp__desc">{n.desc}</span>
+        <span class="cp__row cp__row--foot">
+          <span class="cp__meta">{n.meta}</span>
+          <span class="cp__stars">{n.stars ? `★ ${n.stars}` : 'new'}</span>
+        </span>
+        {n.gate && <span class="cp__gate">{n.gate}</span>}
+      </a>
+
+      {n.edge && <span class="cp__edge"><i aria-hidden="true"></i>{n.edge}</span>}
+    </>
+  ))}
+
+  <span class="cp__wire" aria-hidden="true"></span>
+  <p class="cp__cap">a conclusion you can check</p>
+</figure>
+
+<style>
+  .cp { margin: 0; max-width: 40rem; display: flex; flex-direction: column; align-items: stretch; }
+
+  .cp__cap {
+    margin: 0; align-self: center; text-align: center;
+    font-family: var(--mono); font-size: .6875rem; letter-spacing: .06em;
+    color: var(--text-faint);
+    border: 1px dashed var(--line-bright); border-radius: 999px;
+    padding: .375rem 1rem;
+  }
+
+  /* the connector between nodes */
+  .cp__wire { align-self: center; width: 1px; height: 22px; background: var(--line-bright); }
+
+  .cp__edge {
+    align-self: center; display: flex; align-items: center; gap: .625rem;
+    font-family: var(--mono); font-size: .6875rem; color: var(--text-faint);
+    text-align: center; padding: 0 1rem;
+  }
+  .cp__edge i { width: 1px; height: 18px; background: var(--line-bright); flex: none; }
+
+  .cp__node {
+    position: relative;
+    display: block; text-decoration: none;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--p);
+    border-radius: var(--r);
+    padding: .875rem 1rem;
+    transition: background .18s, border-color .18s;
+  }
+  .cp__node--authorize { --p: var(--authorize); }
+  .cp__node--act       { --p: var(--act); }
+  .cp__node--evaluate  { --p: var(--evaluate); }
+
+  .cp__node:hover, .cp__node:focus-visible {
+    background: var(--surface-2);
+    border-color: color-mix(in srgb, var(--p) 45%, transparent);
+    border-left-color: var(--p);
+  }
+  .cp__node:hover .cp__name { color: #fff; }
+
+  .cp__row { display: flex; align-items: baseline; justify-content: space-between; gap: .75rem; }
+  .cp__row--foot { margin-top: .625rem; }
+
+  .cp__name { font-size: 1.125rem; font-weight: 600; letter-spacing: -.015em; color: var(--text); transition: color .18s; }
+  .cp__plane {
+    font-family: var(--mono); font-size: .625rem; letter-spacing: .16em;
+    text-transform: uppercase; color: var(--p); white-space: nowrap;
+  }
+  .cp__desc { display: block; margin-top: .25rem; color: var(--text-dim); font-size: .875rem; line-height: 1.5; }
+  .cp__meta { font-family: var(--mono); font-size: .6875rem; color: var(--text-faint); }
+  .cp__stars { font-family: var(--mono); font-size: .6875rem; color: var(--text-dim); white-space: nowrap; }
+
+  /* The approval gate. A side annotation where there is room, an inline
+     line on a phone — it is too important to drop entirely. */
+  .cp__gate {
+    display: block; margin-top: .625rem; padding-top: .5rem;
+    border-top: 1px dashed #4a3b1a;
+    font-family: var(--mono); font-size: .625rem; letter-spacing: .06em;
+    text-transform: uppercase; color: #a8873c;
+  }
+  @media (min-width: 62rem) {
+    .cp__gate {
+      position: absolute; top: 50%; right: calc(100% + 1.25rem);
+      transform: translateY(-50%);
+      margin: 0; padding: .375rem .625rem;
+      width: 9.5rem; text-align: right; line-height: 1.5;
+      border: 0; border-right: 1px dashed #4a3b1a;
+    }
+  }
+</style>

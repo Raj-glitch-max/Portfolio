@@ -1,0 +1,26 @@
+# The previous site shipped a 4.6MB dist with a 948KB JS bundle. This job is
+# what stops that happening again: the budget check fails the build.
+name: site
+
+on:
+  push:
+    branches: [main, 'redesign/**']
+    paths: ['site/**', '.github/workflows/site.yml']
+  pull_request:
+    paths: ['site/**']
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: site
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci || npm install
+      - run: npm run build
+      - name: Enforce performance budget
+        run: npm run budget

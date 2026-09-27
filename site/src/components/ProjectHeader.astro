@@ -1,0 +1,22 @@
+---
+import type { Project } from '../data/site';
+interface Props { p: Project }
+const { p } = Astro.props;
+---
+<section class="wrap" style="padding-bottom:1rem">
+  <p class="eyebrow" style="margin-bottom:1.25rem">
+    <span class="badge badge--plane" style={`--c:var(--${p.plane})`}>{p.planeLabel}</span>
+  </p>
+  <h1>{p.name}</h1>
+  <p class="lede" style="max-width:54ch;margin-top:1.25rem">{p.oneLine}</p>
+
+  <div class="facts" style="margin:1.75rem 0 1.5rem">
+    <span>★ <b>{p.stars}</b> on GitHub</span>
+    <span class="faint">{p.stack.join(' · ')}</span>
+  </div>
+
+  <div class="btn-row">
+    <a class="btn btn--primary" href={p.repo}>Read the code</a>
+    {p.live && <a class="btn" href={p.live}>Live</a>}
+  </div>
+</section>
