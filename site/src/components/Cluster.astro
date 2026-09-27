@@ -1,0 +1,529 @@
+---
+/**
+ * The hero is a running cluster.
+ *
+ * Traffic actually flows. You can kill a pod. When you do, the failure
+ * propagates the way it would in a real service graph — requests to the dead
+ * replica error, the tier sheds load, errors climb. Then the agent wakes up,
+ * sweeps the cluster for evidence, and produces a root cause.
+ *
+ * Then you take the evidence away and ask it again, and it says the same thing.
+ * That last beat is the entire research finding, and by then you have already
+ * caused the incident yourself, so you know what the truth was.
+ *
+ * Canvas 2D, hand-written, no engine. Deferred so it never blocks first paint;
+ * paused off-screen and on hidden tabs; a static poster frame under
+ * prefers-reduced-motion.
+ */
+---
+
+<div class="cx" data-cluster>
+  <div class="cx__stage">
+    <canvas class="cx__canvas" data-canvas aria-hidden="true"></canvas>
+
+    <p class="cx__fallback" data-fallback>
+      A live service graph: ingress → api-gateway → checkout-api → postgres/redis,
+      with traffic flowing between replicas. Inject a fault and an agent investigates it.
+    </p>
+
+    <div class="cx__hud">
+      <span class="cx__stat"><b data-rps>0</b> req/s</span>
+      <span class="cx__stat"><b data-err>0.0</b>% err</span>
+      <span class="cx__stat cx__stat--phase" data-phase>healthy</span>
+    </div>
+  </div>
+
+  <div class="cx__side">
+    <div class="cx__ctl">
+      <span class="cx__h">inject a fault</span>
+      <div class="cx__btns">
+        <button class="cx__b" data-fault="oom">OOMKill checkout-api</button>
+        <button class="cx__b" data-fault="crash">CrashLoopBackOff</button>
+        <button class="cx__b" data-fault="net">partition postgres</button>
+      </div>
+    </div>
+
+    <div class="cx__panel">
+      <div class="cx__h cx__h--row">
+        <span data-evtitle>evidence</span>
+        <span class="cx__cnt" data-evcount>—</span>
+      </div>
+      <ul class="cx__ev" data-ev>
+        <li class="cx__idle">waiting for an incident</li>
+      </ul>
+    </div>
+
+    <div class="cx__panel cx__panel--rca" data-rcawrap hidden>
+      <div class="cx__h">the agent's root cause</div>
+      <p class="cx__rca" data-rca></p>
+      <div class="cx__conf">
+        <span>confidence</span><span data-conf>—</span>
+      </div>
+      <button class="cx__b cx__b--key" data-ablate hidden>now delete the evidence and ask again</button>
+      <output class="cx__verdict" data-verdict aria-live="polite"></output>
+    </div>
+
+    <button class="cx__reset" data-reset hidden>heal the cluster</button>
+  </div>
+</div>
+
+<script>
+  type Phase = 'healthy' | 'failing' | 'investigating' | 'diagnosed' | 'ablated';
+  interface Pod { x: number; y: number; tier: number; i: number; name: string; health: number; dead: boolean; restarts: number; pulse: number; }
+  interface P { from: Pod; to: Pod; t: number; speed: number; bad: boolean; }
+
+  const COL = {
+    ok: '#3fb8d4', warn: '#f0b429', bad: '#e05c5c', dim: '#2b3237',
+    text: '#6b7278', edge: 'rgba(255,255,255,.07)', evaluate: '#9d8cf5',
+  };
+
+  const TIERS = [
+    { label: 'ingress', n: 1, name: 'ingress-nginx' },
+    { label: 'gateway', n: 3, name: 'api-gateway' },
+    { label: 'checkout', n: 3, name: 'checkout-api' },
+    { label: 'data', n: 3, name: 'postgres/redis' },
+  ];
+
+  const FAULTS: Record<string, { label: string; target: number; evidence: string[][]; rca: string; conf: number }> = {
+    oom: {
+      label: 'OOMKilled', target: 2,
+      evidence: [
+        ['event', 'Killing container checkout-api: OOMKilled (exit 137)'],
+        ['log', 'fatal: runtime: out of memory — cannot allocate 24MB'],
+        ['log', 'handler.go:212 request buffer grew to 241MB'],
+        ['metric', 'memory_working_set → 256Mi (limit 256Mi)'],
+      ],
+      rca: 'The container was OOMKilled. Memory working set reached the 256Mi limit, driven by an unbounded request buffer in the handler path.',
+      conf: 0.91,
+    },
+    crash: {
+      label: 'CrashLoopBackOff', target: 1,
+      evidence: [
+        ['event', 'Back-off restarting failed container api-gateway'],
+        ['log', 'panic: nil pointer dereference in router.Init'],
+        ['log', 'config: MISSING key AUTH_ISSUER_URL'],
+        ['metric', 'restart_count → 7 in 4m'],
+      ],
+      rca: 'api-gateway is crash-looping on startup: a nil dereference in router.Init caused by a missing AUTH_ISSUER_URL config key.',
+      conf: 0.88,
+    },
+    net: {
+      label: 'NetworkPartition', target: 3,
+      evidence: [
+        ['event', 'Readiness probe failed: dial tcp 10.44.2.9:5432 i/o timeout'],
+        ['log', 'pq: could not connect to server: connection timed out'],
+        ['log', 'pool: 0/20 connections healthy, draining'],
+        ['metric', 'db_connection_errors → 412/min'],
+      ],
+      rca: 'checkout-api cannot reach postgres: a network partition is timing out every connection attempt and the pool has drained.',
+      conf: 0.86,
+    },
+  };
+
+  const root = document.querySelector<HTMLElement>('[data-cluster]');
+  if (root) init(root);
+
+  function init(root: HTMLElement) {
+    const cv = root.querySelector<HTMLCanvasElement>('[data-canvas]')!;
+    const ctx = cv.getContext('2d')!;
+    const $ = <T extends Element>(s: string) => root.querySelector<T>(s)!;
+
+    const elRps = $<HTMLElement>('[data-rps]');
+    const elErr = $<HTMLElement>('[data-err]');
+    const elPhase = $<HTMLElement>('[data-phase]');
+    const elEv = $<HTMLElement>('[data-ev]');
+    const elEvCount = $<HTMLElement>('[data-evcount]');
+    const elEvTitle = $<HTMLElement>('[data-evtitle]');
+    const elRcaWrap = $<HTMLElement>('[data-rcawrap]');
+    const elRca = $<HTMLElement>('[data-rca]');
+    const elConf = $<HTMLElement>('[data-conf]');
+    const elAblate = $<HTMLButtonElement>('[data-ablate]');
+    const elVerdict = $<HTMLElement>('[data-verdict]');
+    const elReset = $<HTMLButtonElement>('[data-reset]');
+    const elFallback = $<HTMLElement>('[data-fallback]');
+
+    const reduced = matchMedia('(prefers-reduced-motion: reduce)');
+    let W = 0, H = 0, dpr = 1;
+    let pods: Pod[] = [], parts: P[] = [];
+    let phase: Phase = 'healthy';
+    let fault: keyof typeof FAULTS | null = null;
+    let rps = 0, err = 0, errAcc = 0, okAcc = 0, sweep = -1, spawn = 0, last = 0, raf = 0, live = false;
+
+    function layout() {
+      const r = cv.getBoundingClientRect();
+      W = Math.max(320, r.width); H = Math.max(200, r.height);
+      dpr = Math.min(devicePixelRatio || 1, 2);
+      cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+      relayoutFrom = pods.length ? new Map(pods.map((p) => [p.tier + ':' + p.i, p])) : null;
+      pods = [];
+      const padX = W < 560 ? 34 : 64;
+      const gap = (W - padX * 2) / (TIERS.length - 1);
+      TIERS.forEach((t, ti) => {
+        const x = padX + gap * ti;
+        // Fill the frame: the graph was using barely a third of the canvas
+        // height, which read as empty space rather than as a system.
+        const mid = (H - 26) / 2;
+        const span = Math.min(H - 120, t.n * 82);
+        t.n === 1
+          ? pods.push(mk(x, mid, ti, 0, t.name))
+          : Array.from({ length: t.n }, (_, i) =>
+              pods.push(mk(x, mid - span / 2 + (span / (t.n - 1)) * i, ti, i, t.name)));
+      });
+    }
+
+    function mk(x: number, y: number, tier: number, i: number, name: string): Pod {
+      const was = relayoutFrom?.get(tier + ':' + i);
+      return {
+        x, y, tier, i, name,
+        health: was?.health ?? 1,
+        dead: was?.dead ?? false,
+        restarts: was?.restarts ?? 0,
+        pulse: was?.pulse ?? Math.random() * 6,
+      };
+    }
+    let relayoutFrom: Map<string, Pod> | null = null;
+
+    const tierPods = (t: number) => pods.filter((p) => p.tier === t);
+
+    function emit() {
+      const a = tierPods(0)[0];
+      const b = tierPods(1).filter((p) => !p.dead);
+      if (!b.length) return;
+      parts.push({ from: a, to: b[(Math.random() * b.length) | 0], t: 0, speed: 0.55 + Math.random() * 0.4, bad: false });
+    }
+
+    function advance(p: P) {
+      const next = tierPods(p.to.tier + 1);
+      if (!next.length) return null;
+      // A dead replica is still in the service's endpoints during the failure
+      // window, so it keeps taking its share of traffic. With three replicas
+      // and one dead that is a third of requests failing — route uniformly and
+      // let the error rate fall out of the simulation rather than asserting it.
+      const pick = next[(Math.random() * next.length) | 0];
+      return { from: p.to, to: pick, t: 0, speed: 0.55 + Math.random() * 0.4, bad: pick.dead } as P;
+    }
+
+    function step(dt: number) {
+      spawn += dt;
+      const rate = phase === 'healthy' ? 0.055 : 0.075;
+      while (spawn > rate) { spawn -= rate; emit(); }
+
+      let bad = 0, ok = 0;
+      const spawned: P[] = [];
+      parts = parts.filter((p) => {
+        p.t += dt * p.speed;
+        if (p.t < 1) return true;
+        if (p.bad) { bad++; return false; }
+        const n = advance(p);
+        if (n) spawned.push(n); else ok++;
+        return false;
+      });
+      if (spawned.length) parts = parts.concat(spawned);
+
+      // A real ratio over a decaying window: failed / (failed + completed).
+      const decay = Math.pow(0.5, dt / 1.5);
+      errAcc = errAcc * decay + bad;
+      okAcc = okAcc * decay + ok;
+      const total = errAcc + okAcc;
+      const target = total > 0.5 ? (errAcc / total) * 100 : 0;
+      err += (target - err) * Math.min(1, dt * 1.6);
+      rps += ((phase === 'healthy' ? 1240 : 980) + Math.sin(performance.now() / 900) * 60 - rps) * Math.min(1, dt * 2);
+
+      pods.forEach((p) => {
+        p.pulse += dt * (p.dead ? 5 : 1.6);
+        const want = p.dead ? 0 : 1;
+        p.health += (want - p.health) * Math.min(1, dt * 3);
+      });
+
+      if (sweep >= 0) {
+        sweep = Math.min(1.35, sweep + dt * 0.45);
+      }
+
+      elRps.textContent = String(Math.round(rps));
+      elErr.textContent = err.toFixed(1);
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, W, H);
+      const showLabels = W > 520;
+
+      // edges
+      ctx.lineWidth = 1;
+      for (let t = 0; t < TIERS.length - 1; t++)
+        for (const a of tierPods(t))
+          for (const b of tierPods(t + 1)) {
+            ctx.strokeStyle = a.dead || b.dead ? 'rgba(224,92,92,.10)' : COL.edge;
+            ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+          }
+
+      // particles
+      for (const p of parts) {
+        const x = p.from.x + (p.to.x - p.from.x) * p.t;
+        const y = p.from.y + (p.to.y - p.from.y) * p.t;
+        const c = p.bad ? COL.bad : COL.ok;
+        ctx.globalAlpha = p.bad ? 0.95 : 0.75;
+        ctx.strokeStyle = c; ctx.lineWidth = 1.6; ctx.lineCap = 'round';
+        const bx = p.from.x + (p.to.x - p.from.x) * Math.max(0, p.t - 0.09);
+        const by = p.from.y + (p.to.y - p.from.y) * Math.max(0, p.t - 0.09);
+        ctx.beginPath(); ctx.moveTo(bx, by); ctx.lineTo(x, y); ctx.stroke();
+        ctx.globalAlpha = 1;
+      }
+
+      // the investigation sweep
+      if (sweep >= 0) {
+        const sx = sweep * (W + 120) - 60;
+        const g = ctx.createLinearGradient(sx - 70, 0, sx + 10, 0);
+        g.addColorStop(0, 'rgba(157,140,245,0)');
+        g.addColorStop(1, 'rgba(157,140,245,.30)');
+        ctx.fillStyle = g; ctx.fillRect(sx - 70, 0, 80, H);
+        ctx.strokeStyle = COL.evaluate; ctx.globalAlpha = .75; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(sx, 0); ctx.lineTo(sx, H); ctx.stroke(); ctx.globalAlpha = 1;
+      }
+
+      // pods
+      for (const p of pods) {
+        const r = 7;
+        const col = p.dead ? COL.bad : p.health < 0.85 ? COL.warn : COL.ok;
+        if (!p.dead) {
+          const a = 0.10 + Math.sin(p.pulse) * 0.05;
+          ctx.fillStyle = col; ctx.globalAlpha = a;
+          ctx.beginPath(); ctx.arc(p.x, p.y, r + 8, 0, 7); ctx.fill(); ctx.globalAlpha = 1;
+        } else {
+          const a = 0.22 + Math.sin(p.pulse) * 0.18;
+          ctx.fillStyle = COL.bad; ctx.globalAlpha = Math.max(0, a);
+          ctx.beginPath(); ctx.arc(p.x, p.y, r + 11, 0, 7); ctx.fill(); ctx.globalAlpha = 1;
+        }
+        ctx.fillStyle = p.dead ? '#1a0d0d' : '#0d0f11';
+        ctx.strokeStyle = col; ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.roundRect(p.x - r, p.y - r, r * 2, r * 2, 2.5); ctx.fill(); ctx.stroke();
+        if (p.dead) {
+          ctx.strokeStyle = COL.bad; ctx.lineWidth = 1.2;
+          ctx.beginPath();
+          ctx.moveTo(p.x - 3.5, p.y - 3.5); ctx.lineTo(p.x + 3.5, p.y + 3.5);
+          ctx.moveTo(p.x + 3.5, p.y - 3.5); ctx.lineTo(p.x - 3.5, p.y + 3.5);
+          ctx.stroke();
+        }
+      }
+
+      // tier labels
+      if (showLabels) {
+        ctx.font = '10px ui-monospace, SFMono-Regular, Menlo, monospace';
+        ctx.textAlign = 'center';
+        TIERS.forEach((t, ti) => {
+          const p = tierPods(ti)[0];
+          const dead = tierPods(ti).some((x) => x.dead);
+          ctx.fillStyle = dead ? COL.bad : COL.text;
+          ctx.fillText(t.name, p.x, H - 14);
+        });
+      }
+    }
+
+    function loop(now: number) {
+      const dt = Math.min(0.05, (now - last) / 1000 || 0);
+      last = now;
+      step(dt); draw();
+      raf = requestAnimationFrame(loop);
+    }
+
+    /** Repaint a single frame when the loop is not running. */
+    function paint() { if (!live) draw(); }
+
+    function start() { if (!live && !reduced.matches) { live = true; last = performance.now(); raf = requestAnimationFrame(loop); } }
+    function stop() { live = false; cancelAnimationFrame(raf); }
+
+    // ---- incident flow ----
+
+    function setPhase(p: Phase, label?: string) {
+      phase = p;
+      elPhase.textContent = label ?? p;
+      elPhase.dataset.p = p;
+    }
+
+    function inject(kind: keyof typeof FAULTS) {
+      if (fault) return;
+      fault = kind;
+      const f = FAULTS[kind];
+      const victims = tierPods(f.target);
+      victims[0].dead = true;
+      if (kind === 'crash') victims[0].restarts = 7;
+
+      setPhase('failing', f.label);
+      root.querySelectorAll<HTMLButtonElement>('[data-fault]').forEach((b) => (b.disabled = true));
+      elReset.hidden = false;
+
+      elEvTitle.textContent = 'evidence';
+      elEv.innerHTML = '<li class="cx__idle">agent investigating…</li>';
+      elEvCount.textContent = '…';
+
+      paint();
+      setTimeout(() => {
+        setPhase('investigating');
+        sweep = 0;
+        paint();
+        // Fires on a timer, not on the render loop, so the incident still
+        // resolves if the canvas is paused while it is in flight.
+        setTimeout(() => { sweep = -1; diagnose(); }, reduced.matches ? 0 : 2600);
+      }, 700);
+    }
+
+    function diagnose() {
+      if (!fault || phase === 'diagnosed' || phase === 'ablated') return;
+      const f = FAULTS[fault];
+      setPhase('diagnosed');
+      elEv.innerHTML = f.evidence
+        .map(([k, t]) => `<li class="cx__evi"><span>${k}</span>${t}</li>`)
+        .join('');
+      elEvCount.textContent = `${f.evidence.length} collected`;
+      elRcaWrap.hidden = false;
+      elRca.textContent = f.rca;
+      elConf.textContent = f.conf.toFixed(2);
+      elAblate.hidden = false;
+      paint();
+    }
+
+    elAblate.addEventListener('click', () => {
+      if (!fault) return;
+      const f = FAULTS[fault];
+      setPhase('ablated');
+      elEvTitle.textContent = 'evidence — withheld';
+      elEv.innerHTML = f.evidence
+        .map(([k, t]) => `<li class="cx__evi is-gone"><span>${k}</span>${t}</li>`)
+        .join('');
+      elEvCount.textContent = '0 of ' + f.evidence.length;
+      elRca.textContent = f.rca;
+      elConf.textContent = (f.conf - 0.02).toFixed(2);
+      elAblate.hidden = true;
+      elVerdict.className = 'cx__verdict is-shown';
+      elVerdict.innerHTML =
+        '<b>Same answer. Same confidence. No evidence.</b> You caused this incident, so you know what the truth was — ' +
+        'and you just watched the conclusion survive the removal of everything that justified it. ' +
+        '<span>That is the Confident Liar effect. ECS &#8776; 0.</span>';
+    });
+
+    elReset.addEventListener('click', () => {
+      fault = null; sweep = -1;
+      pods.forEach((p) => { p.dead = false; p.restarts = 0; });
+      parts = []; errAcc = 0; okAcc = 0;
+      setPhase('healthy');
+      paint();
+      root.querySelectorAll<HTMLButtonElement>('[data-fault]').forEach((b) => (b.disabled = false));
+      elReset.hidden = true;
+      elRcaWrap.hidden = true;
+      elAblate.hidden = true;
+      elVerdict.className = 'cx__verdict';
+      elVerdict.textContent = '';
+      elEvTitle.textContent = 'evidence';
+      elEvCount.textContent = '—';
+      elEv.innerHTML = '<li class="cx__idle">waiting for an incident</li>';
+    });
+
+    root.querySelectorAll<HTMLButtonElement>('[data-fault]').forEach((b) =>
+      b.addEventListener('click', () => inject(b.dataset.fault as keyof typeof FAULTS)));
+
+    // ---- lifecycle ----
+
+    layout();
+    elFallback.hidden = true;
+    draw();
+
+    new ResizeObserver(() => { layout(); if (!live) draw(); }).observe(cv);
+    new IntersectionObserver((e) => (e[0].isIntersecting ? start() : stop()), { threshold: 0.05 }).observe(cv);
+    document.addEventListener('visibilitychange', () => (document.hidden ? stop() : start()));
+    reduced.addEventListener('change', () => (reduced.matches ? stop() : start()));
+  }
+</script>
+
+<style>
+  .cx {
+    display: grid; gap: 0;
+    border: 1px solid var(--line); border-radius: var(--r);
+    background: var(--surface); overflow: hidden;
+  }
+  @media (min-width: 60rem) { .cx { grid-template-columns: 1.55fr 1fr; } }
+
+  .cx__stage { position: relative; min-height: 300px; }
+  @media (min-width: 60rem) { .cx__stage { min-height: 420px; } }
+  .cx__canvas { display: block; width: 100%; height: 100%; position: absolute; inset: 0; }
+
+  .cx__fallback { margin: 0; padding: 1.25rem; color: var(--text-dim); font-size: .875rem; }
+
+  .cx__hud {
+    position: absolute; top: .75rem; left: .875rem; display: flex; gap: .875rem;
+    font-family: var(--mono); font-size: .6875rem; color: var(--text-faint);
+    pointer-events: none;
+  }
+  .cx__stat b { color: var(--text); font-weight: 500; }
+  .cx__stat--phase {
+    text-transform: uppercase; letter-spacing: .12em;
+    padding: .05rem .4rem; border-radius: 3px; border: 1px solid var(--line-bright);
+  }
+  .cx__stat--phase[data-p='healthy'] { color: var(--act); border-color: color-mix(in srgb, var(--act) 40%, transparent); }
+  .cx__stat--phase[data-p='failing'] { color: #e05c5c; border-color: #5c2a2a; }
+  .cx__stat--phase[data-p='investigating'] { color: var(--evaluate); border-color: #453a6b; }
+  .cx__stat--phase[data-p='diagnosed'],
+  .cx__stat--phase[data-p='ablated'] { color: var(--evaluate); border-color: #453a6b; }
+
+  .cx__side { border-top: 1px solid var(--line); padding: 1.125rem 1.25rem 1.375rem; }
+  @media (min-width: 60rem) { .cx__side { border-top: 0; border-left: 1px solid var(--line); } }
+
+  .cx__h {
+    display: block; margin-bottom: .625rem;
+    font-family: var(--mono); font-size: .6875rem; letter-spacing: .1em;
+    text-transform: uppercase; color: var(--text-faint);
+  }
+  .cx__h--row { display: flex; justify-content: space-between; }
+  .cx__cnt { color: var(--text-dim); letter-spacing: 0; }
+
+  .cx__btns { display: flex; flex-wrap: wrap; gap: .5rem; }
+  .cx__b {
+    font: inherit; font-family: var(--mono); font-size: .75rem;
+    padding: .375rem .625rem; border-radius: 4px; cursor: pointer;
+    background: var(--surface-2); color: var(--text-dim);
+    border: 1px solid var(--line-bright);
+    transition: color .15s, border-color .15s;
+  }
+  .cx__b:hover:not(:disabled) { color: #e88b8b; border-color: #7a3030; }
+  .cx__b:disabled { opacity: .3; cursor: default; }
+  .cx__b--key {
+    margin-top: .875rem; width: 100%; text-align: left;
+    color: var(--evaluate); border-color: #453a6b; background: #100e1c;
+  }
+  .cx__b--key:hover:not(:disabled) { color: #c4b8ff; border-color: var(--evaluate); }
+
+  .cx__panel { margin-top: 1.25rem; }
+
+  .cx__ev { list-style: none; margin: 0; padding: 0; font-family: var(--mono); font-size: .6875rem; min-height: 5.5rem; }
+  .cx__idle { color: var(--text-faint); font-style: italic; }
+  :global(.cx__evi) {
+    display: flex; gap: .5rem; padding: .25rem 0; color: var(--text-dim);
+    border-bottom: 1px dashed rgba(255,255,255,.05);
+  }
+  :global(.cx__evi span) { flex: none; width: 3rem; color: var(--text-faint); text-transform: uppercase; font-size: .625rem; padding-top: .1rem; }
+  :global(.cx__evi.is-gone) { opacity: .26; }
+  :global(.cx__evi.is-gone) { text-decoration: line-through; text-decoration-color: #7a3030; }
+
+  .cx__rca { margin: 0 0 .75rem; font-size: .875rem; line-height: 1.5; color: var(--text); }
+  .cx__conf {
+    display: flex; justify-content: space-between;
+    font-family: var(--mono); font-size: .6875rem; color: var(--text-faint);
+  }
+  .cx__conf span:last-child { color: var(--text); }
+
+  .cx__verdict { display: none; }
+  .cx__verdict.is-shown {
+    display: block; margin-top: 1rem; padding: .75rem .875rem;
+    background: #16090b; border-left: 2px solid #7a3030; border-radius: 0 4px 4px 0;
+    font-size: .8125rem; line-height: 1.55; color: var(--text-dim);
+  }
+  .cx__verdict b { color: #e88b8b; }
+  .cx__verdict span { display: block; margin-top: .5rem; font-family: var(--mono); font-size: .6875rem; color: var(--text-faint); }
+
+  .cx__reset {
+    margin-top: 1rem; font: inherit; font-family: var(--mono); font-size: .6875rem;
+    background: none; border: 0; padding: 0; cursor: pointer;
+    color: var(--text-faint); text-decoration: underline; text-underline-offset: 3px;
+  }
+  .cx__reset:hover { color: var(--text); }
+</style>

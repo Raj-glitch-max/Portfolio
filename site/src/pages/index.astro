@@ -1,6 +1,7 @@
 ---
 import Base from '../layouts/Base.astro';
 import ControlPlane from '../components/ControlPlane.astro';
+import Cluster from '../components/Cluster.astro';
 import { PROFILE, EDUCATION, CERTIFICATIONS, SKILLS, PROJECTS, OTHER, TOTAL_STARS } from '../data/site';
 
 const tfwhy = PROJECTS.find((p) => p.slug === 'tf-why')!;
@@ -9,35 +10,39 @@ const desc =
 ---
 
 <Base title="Home" description={desc} path="/">
-  <!-- ABOVE THE FOLD: every claim here is checkable in one click. -->
-  <section class="wrap" style="padding-bottom:1.5rem">
-    <p class="eyebrow" style="margin-bottom:1.5rem">
+  <!-- ABOVE THE FOLD: the claim, the proof it is checkable, then a running cluster. -->
+  <section class="wrap" style="padding-block:2.5rem 1rem">
+    <p class="eyebrow" style="margin-bottom:1.25rem">
       {PROFILE.title} · {PROFILE.location}
     </p>
 
-    <h1 style="max-width:30ch">I build the control plane for AI agents.</h1>
+    <h1 style="max-width:26ch">I build the control plane for AI agents.</h1>
 
-    <p class="lede" style="max-width:56ch;margin-top:1.5rem">
-      What an agent is allowed to do — and whether you can trust what it concluded.
-      Three services: one issues capability tokens bound to workload identity, one runs
-      the incident-response loop behind a human approval gate, and one measures whether
-      the model actually read the evidence.
+    <p class="lede" style="max-width:60ch;margin-top:1.125rem">
+      What an agent is allowed to do, and whether you can trust what it concluded.
+      Below is a running service graph. Break it, and watch an agent diagnose the
+      incident you just caused — then watch it keep that answer after you take the
+      evidence away.
     </p>
 
-    <div class="facts" style="margin:2rem 0 1.75rem">
-      <span><b>{TOTAL_STARS}★</b> across 6 open-source tools</span>
-      <span><b>AWS</b> Solutions Architect Associate</span>
-      <span><b>{PROFILE.graduated}</b>, MIT ADT Pune</span>
+    <div style="display:flex;flex-wrap:wrap;gap:1.25rem;align-items:center;margin:1.5rem 0 1.75rem">
+      <div class="btn-row">
+        <a class="btn btn--primary" href={PROFILE.links.resume}>Résumé (PDF)</a>
+        <a class="btn" href={PROFILE.links.github} rel="me">GitHub</a>
+        <a class="btn" href={`mailto:${PROFILE.email}`}>{PROFILE.email}</a>
+      </div>
+      <div class="facts">
+        <span><b>{TOTAL_STARS}★</b> across 6 tools</span>
+        <span><b>AWS</b> SA Associate</span>
+        <span><b>{PROFILE.graduated}</b></span>
+      </div>
     </div>
 
-    <div class="btn-row">
-      <a class="btn btn--primary" href={PROFILE.links.resume}>Résumé (PDF)</a>
-      <a class="btn" href={PROFILE.links.github} rel="me">GitHub</a>
-      <a class="btn" href={`mailto:${PROFILE.email}`}>{PROFILE.email}</a>
-    </div>
+    <Cluster />
 
-    <p class="mono faint" style="font-size:.75rem;margin-top:1.5rem">
-      {PROFILE.status}
+    <p class="mono faint" style="font-size:.6875rem;margin-top:.875rem;max-width:64ch">
+      Not a video and not a mock-up — a service graph simulated in the page, with the fault
+      types and evidence taken from KLRB's scenarios. {PROFILE.status}.
     </p>
   </section>
 
