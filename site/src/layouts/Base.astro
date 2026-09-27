@@ -1,0 +1,100 @@
+---
+import '../styles/global.css';
+import { PROFILE } from '../data/site';
+
+interface Props {
+  title: string;
+  description: string;
+  /** Plane accent for this page, drives --c. */
+  accent?: 'authorize' | 'act' | 'evaluate' | 'attribute';
+  path?: string;
+  /** Link-preview card basename in /og. Defaults to the path segment. */
+  og?: string;
+}
+const { title, description, accent, path = '', og } = Astro.props;
+const ogCard = og ?? (path === '/' || !path ? 'index' : path.replace(/^\//, ''));
+const ogUrl = `https://${PROFILE.domain}/og/${ogCard}.png`;
+const canonical = `https://${PROFILE.domain}${path}`;
+const fullTitle = path === '/' ? `${PROFILE.name} — ${PROFILE.title}` : `${title} · ${PROFILE.name}`;
+
+// JSON-LD: this is what makes a name-search resolve to the right person.
+const jsonld = {
+  '@context': 'https://schema.org',
+  '@type': 'Person',
+  name: PROFILE.name,
+  jobTitle: PROFILE.title,
+  email: `mailto:${PROFILE.email}`,
+  url: `https://${PROFILE.domain}`,
+  address: { '@type': 'PostalAddress', addressLocality: 'Pune', addressCountry: 'IN' },
+  alumniOf: { '@type': 'CollegeOrUniversity', name: 'MIT ADT University' },
+  sameAs: [PROFILE.links.github, PROFILE.links.linkedin, PROFILE.links.twitter],
+  knowsAbout: ['Go', 'Python', 'Kubernetes', 'SPIFFE', 'AI agent authorization', 'LLM evaluation', 'AWS'],
+};
+---
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{fullTitle}</title>
+  <meta name="description" content={description} />
+  <link rel="canonical" href={canonical} />
+  <meta name="author" content={PROFILE.name} />
+
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content={fullTitle} />
+  <meta property="og:description" content={description} />
+  <meta property="og:url" content={canonical} />
+  <meta property="og:site_name" content={PROFILE.domain} />
+  <meta property="og:image" content={ogUrl} />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:image:alt" content={description} />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content={fullTitle} />
+  <meta name="twitter:description" content={description} />
+  <meta name="twitter:image" content={ogUrl} />
+
+  <meta name="theme-color" content="#08090a" />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="alternate" type="application/rss+xml" title="Sitemap" href="/sitemap-index.xml" />
+  <script type="application/ld+json" is:inline set:html={JSON.stringify(jsonld)} />
+</head>
+<body style={accent ? `--c: var(--${accent})` : undefined}>
+  <a class="skip" href="#main">Skip to content</a>
+
+  <nav class="nav no-print">
+    <div class="wrap nav__in">
+      <a class="nav__brand" href="/"><b>Raj Patil</b><span class="faint"> — backend / AI-infra</span></a>
+      <span class="nav__spacer"></span>
+      <div class="nav__links">
+        <a href="/atlas" aria-current={path === '/atlas' ? 'page' : undefined}>atlas</a>
+        <a href="/aisre" aria-current={path === '/aisre' ? 'page' : undefined}>aisre</a>
+        <a href="/klrb" aria-current={path === '/klrb' ? 'page' : undefined}>klrb</a>
+        <a href="/tf-why" class="hide-sm" aria-current={path === '/tf-why' ? 'page' : undefined}>tf.why</a>
+        <a href={PROFILE.links.resume}>résumé</a>
+      </div>
+    </div>
+  </nav>
+
+  <main id="main" class="shell">
+    <slot />
+  </main>
+
+  <footer class="foot no-print">
+    <div class="wrap foot__grid">
+      <div>
+        <div class="mono" style="font-size:.8125rem">{PROFILE.name}</div>
+        <div class="mono faint" style="font-size:.75rem">{PROFILE.title} · {PROFILE.location}</div>
+        <div class="mono faint" style="font-size:.75rem;margin-top:.5rem">{PROFILE.status}</div>
+      </div>
+      <div class="nav__links" style="flex-direction:column;gap:.5rem;align-items:flex-start">
+        <a href={`mailto:${PROFILE.email}`}>{PROFILE.email}</a>
+        <a href={PROFILE.links.github} rel="me">github.com/Raj-glitch-max</a>
+        <a href={PROFILE.links.linkedin} rel="me">linkedin</a>
+        <a href={PROFILE.links.resume}>résumé (pdf)</a>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>

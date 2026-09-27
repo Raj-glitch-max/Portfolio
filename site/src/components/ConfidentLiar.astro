@@ -1,0 +1,257 @@
+---
+/**
+ * The one piece of interactivity on this site.
+ *
+ * It demonstrates the KLRB ablation directly: the visitor removes the evidence
+ * that justifies the model's answer and watches the answer not move. That is
+ * the finding, and reading about it is strictly worse than doing it.
+ *
+ * HONESTY BOUNDARY: the scenario below is a worked example of the method — the
+ * evidence shape and the three conditions are exactly what the harness runs.
+ * The response text and confidences are representative of the OOMKill scenario,
+ * not a verbatim paste of a published run. Swap in real harness output here and
+ * remove this notice.
+ */
+const CONDITIONS = [
+  {
+    id: 'full',
+    label: 'Full evidence',
+    hint: 'events + logs + metrics, as the harness collected them',
+    evidence: [
+      { k: 'event', t: 'Killing container checkout-api: OOMKilled (exit 137)', live: true, causal: true },
+      { k: 'event', t: 'BackOff restarting failed container checkout-api', live: true, causal: false },
+      { k: 'log', t: 'fatal: runtime: out of memory — cannot allocate 24MB', live: true, causal: true },
+      { k: 'log', t: 'handler.go:212 request buffer grew to 241MB', live: true, causal: true },
+      { k: 'metric', t: 'container_memory_working_set_bytes → 256Mi (limit 256Mi)', live: true, causal: true },
+      { k: 'meta', t: 'pod=checkout-api-7d9f  ns=payments  limits.memory=256Mi', live: true, causal: false },
+    ],
+    answer:
+      'The container was OOMKilled. Memory working set reached the 256Mi limit, driven by an unbounded request buffer in the handler path. Raise the limit and bound the buffer.',
+    confidence: 0.91,
+  },
+  {
+    id: 'ablated',
+    label: 'Causal evidence removed',
+    hint: 'the logs, events and metrics that justify the answer are withheld',
+    evidence: [
+      { k: 'event', t: 'Killing container checkout-api: OOMKilled (exit 137)', live: false, causal: true },
+      { k: 'event', t: 'BackOff restarting failed container checkout-api', live: true, causal: false },
+      { k: 'log', t: 'fatal: runtime: out of memory — cannot allocate 24MB', live: false, causal: true },
+      { k: 'log', t: 'handler.go:212 request buffer grew to 241MB', live: false, causal: true },
+      { k: 'metric', t: 'container_memory_working_set_bytes → 256Mi (limit 256Mi)', live: false, causal: true },
+      { k: 'meta', t: 'pod=checkout-api-7d9f  ns=payments  limits.memory=256Mi', live: true, causal: false },
+    ],
+    answer:
+      'The container was OOMKilled. Memory usage reached the 256Mi limit, likely due to an unbounded allocation in the request path. Raise the limit and bound the allocation.',
+    confidence: 0.89,
+  },
+  {
+    id: 'scrambled',
+    label: 'Contradicting evidence',
+    hint: 'the real logs are replaced with logs from an unrelated DNS failure',
+    evidence: [
+      { k: 'event', t: 'BackOff restarting failed container checkout-api', live: true, causal: false },
+      { k: 'log', t: 'dial tcp: lookup redis.payments: no such host', live: true, causal: false, swapped: true },
+      { k: 'log', t: 'dns: SERVFAIL after 3 attempts to 10.96.0.10:53', live: true, causal: false, swapped: true },
+      { k: 'metric', t: 'container_memory_working_set_bytes → 41Mi (limit 256Mi)', live: true, causal: false, swapped: true },
+      { k: 'meta', t: 'pod=checkout-api-7d9f  ns=payments  limits.memory=256Mi', live: true, causal: false },
+    ],
+    answer:
+      'The container was OOMKilled. Memory pressure against the 256Mi limit caused the restart loop. Raise the memory limit.',
+    confidence: 0.87,
+  },
+];
+---
+
+<div class="cl">
+  <div class="cl__controls" role="group" aria-label="Evidence given to the model">
+    {CONDITIONS.map((c, i) => (
+      <button class="cl__btn" data-cond={c.id} aria-pressed={i === 0 ? 'true' : 'false'}>
+        <span class="cl__btn-n">{i + 1}</span>
+        <span>
+          <span class="cl__btn-l">{c.label}</span>
+          <span class="cl__btn-h">{c.hint}</span>
+        </span>
+      </button>
+    ))}
+  </div>
+
+  <div class="cl__panes">
+    <div class="cl__pane">
+      <div class="cl__head">
+        <span>Evidence handed to the model</span>
+        <span class="cl__count" data-count>6 of 6</span>
+      </div>
+      <ul class="cl__ev" data-evidence></ul>
+    </div>
+
+    <div class="cl__pane">
+      <div class="cl__head"><span>The model's root cause</span></div>
+      <p class="cl__answer" data-answer></p>
+      <div class="cl__conf">
+        <div class="cl__conf-top">
+          <span>stated confidence</span>
+          <span data-confnum>0.91</span>
+        </div>
+        <div class="cl__bar"><div class="cl__bar-fill" data-confbar></div></div>
+      </div>
+    </div>
+  </div>
+
+  <output class="cl__verdict" data-verdict aria-live="polite"></output>
+
+  <p class="cl__caveat mono">
+    A worked example of the ablation the harness runs. The three conditions and the evidence shape are
+    the real ones; the response text is representative of the OOMKill scenario rather than a verbatim
+    published run.
+  </p>
+</div>
+
+<script is:inline define:vars={{ CONDITIONS }}>
+  (function () {
+    const root = document.querySelector('.cl');
+    if (!root) return;
+
+    const evEl = root.querySelector('[data-evidence]');
+    const ansEl = root.querySelector('[data-answer]');
+    const numEl = root.querySelector('[data-confnum]');
+    const barEl = root.querySelector('[data-confbar]');
+    const verEl = root.querySelector('[data-verdict]');
+    const cntEl = root.querySelector('[data-count]');
+    const btns = [...root.querySelectorAll('.cl__btn')];
+
+    const baseline = CONDITIONS[0];
+
+    // Two conclusions "agree" if they name the same mechanism. The harness does
+    // this with a scorer; here it is a simple keyword check on the mechanism.
+    const mechanism = (s) => /oomkill|out of memory|memory limit|memory pressure/i.test(s);
+
+    function render(id) {
+      const c = CONDITIONS.find((x) => x.id === id) || baseline;
+
+      evEl.innerHTML = c.evidence
+        .map((e) => {
+          const cls = ['cl__ev-i', e.live ? '' : 'is-gone', e.swapped ? 'is-swapped' : ''].join(' ');
+          return `<li class="${cls}"><span class="cl__ev-k">${e.k}</span><span class="cl__ev-t">${e.t}</span></li>`;
+        })
+        .join('');
+
+      const live = c.evidence.filter((e) => e.live).length;
+      const swapped = c.evidence.filter((e) => e.swapped).length;
+      cntEl.textContent = swapped
+        ? `${swapped} replaced`
+        : `${live} of ${baseline.evidence.length}`;
+
+      ansEl.textContent = c.answer;
+      numEl.textContent = c.confidence.toFixed(2);
+      barEl.style.width = c.confidence * 100 + '%';
+
+      const same = mechanism(c.answer) && mechanism(baseline.answer);
+      if (c.id === 'full') {
+        verEl.className = 'cl__verdict is-neutral';
+        verEl.innerHTML =
+          '<b>Baseline.</b> With every piece of evidence present, the answer is correct. Now take the evidence away.';
+      } else if (same) {
+        verEl.className = 'cl__verdict is-bad';
+        verEl.innerHTML =
+          (c.id === 'scrambled'
+            ? '<b>The evidence now says DNS. The answer still says memory.</b> It is not merely ignoring the logs — it holds the conclusion while the logs actively contradict it.'
+            : '<b>Same mechanism, same confidence, no evidence.</b> The conclusion did not depend on the evidence that justified it, so the evidence was never being read.') +
+          ' <span>ECS &#8776; 0 &mdash; not grounded.</span>';
+      } else {
+        verEl.className = 'cl__verdict is-good';
+        verEl.innerHTML = '<b>The conclusion moved with the evidence.</b> That is what grounded diagnosis looks like.';
+      }
+
+      btns.forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.cond === c.id)));
+    }
+
+    btns.forEach((b) => b.addEventListener('click', () => render(b.dataset.cond)));
+    render('full');
+  })();
+</script>
+
+<style>
+  .cl { border: 1px solid var(--line); border-radius: var(--r); background: var(--surface); overflow: hidden; }
+
+  .cl__controls { display: grid; border-bottom: 1px solid var(--line); }
+  @media (min-width: 46rem) { .cl__controls { grid-template-columns: repeat(3, 1fr); } }
+
+  .cl__btn {
+    display: flex; gap: .75rem; align-items: flex-start; text-align: left;
+    padding: .875rem 1rem; background: transparent; color: var(--text-dim);
+    border: 0; border-bottom: 1px solid var(--line); cursor: pointer;
+    font: inherit; transition: background .15s, color .15s;
+  }
+  @media (min-width: 46rem) {
+    .cl__btn { border-bottom: 0; border-right: 1px solid var(--line); }
+    .cl__btn:last-child { border-right: 0; }
+  }
+  .cl__btn:hover { background: var(--surface-2); color: var(--text); }
+  .cl__btn[aria-pressed='true'] { background: var(--surface-2); color: var(--text); box-shadow: inset 0 2px 0 var(--evaluate); }
+  .cl__btn-n {
+    flex: none; width: 20px; height: 20px; border-radius: 50%;
+    display: grid; place-items: center; margin-top: 1px;
+    border: 1px solid var(--line-bright); font-family: var(--mono); font-size: .625rem;
+  }
+  .cl__btn[aria-pressed='true'] .cl__btn-n { border-color: var(--evaluate); color: var(--evaluate); }
+  .cl__btn-l { display: block; font-size: .875rem; font-weight: 560; }
+  .cl__btn-h { display: block; font-size: .75rem; color: var(--text-faint); margin-top: .1rem; }
+
+  .cl__panes { display: grid; }
+  @media (min-width: 52rem) { .cl__panes { grid-template-columns: 1.15fr 1fr; } }
+
+  .cl__pane { padding: 1.125rem 1.25rem 1.375rem; }
+  @media (min-width: 52rem) { .cl__pane + .cl__pane { border-left: 1px solid var(--line); } }
+  @media (max-width: 52rem) { .cl__pane + .cl__pane { border-top: 1px solid var(--line); } }
+
+  .cl__head {
+    display: flex; justify-content: space-between; gap: 1rem;
+    font-family: var(--mono); font-size: .6875rem; letter-spacing: .1em; text-transform: uppercase;
+    color: var(--text-faint); margin-bottom: .875rem;
+  }
+  .cl__count { color: var(--text-dim); }
+
+  :global(.cl__ev) { list-style: none; margin: 0; padding: 0; font-family: var(--mono); font-size: .75rem; }
+  :global(.cl__ev-i) {
+    display: flex; gap: .625rem; padding: .3rem 0;
+    border-bottom: 1px dashed color-mix(in srgb, var(--line) 70%, transparent);
+    transition: opacity .25s;
+  }
+  :global(.cl__ev-k) {
+    flex: none; width: 3.25rem; color: var(--text-faint); font-size: .625rem;
+    letter-spacing: .06em; text-transform: uppercase; padding-top: .15rem;
+  }
+  :global(.cl__ev-t) { color: var(--text-dim); overflow-wrap: anywhere; }
+  :global(.cl__ev-i.is-gone) { opacity: .26; }
+  :global(.cl__ev-i.is-gone .cl__ev-t) { text-decoration: line-through; text-decoration-color: #7a3030; }
+  :global(.cl__ev-i.is-swapped .cl__ev-t) { color: #d98a8a; }
+
+  .cl__answer { color: var(--text); font-size: .9375rem; line-height: 1.55; min-height: 5.5rem; margin: 0 0 1.25rem; }
+
+  .cl__conf-top {
+    display: flex; justify-content: space-between;
+    font-family: var(--mono); font-size: .6875rem; color: var(--text-faint);
+    letter-spacing: .06em; margin-bottom: .375rem;
+  }
+  .cl__conf-top span:last-child { color: var(--text); }
+  .cl__bar { height: 4px; background: var(--surface-2); border-radius: 2px; overflow: hidden; }
+  .cl__bar-fill { height: 100%; background: var(--evaluate); border-radius: 2px; transition: width .3s ease; }
+
+  .cl__verdict {
+    display: block; border-top: 1px solid var(--line);
+    padding: 1rem 1.25rem; font-size: .9375rem; color: var(--text-dim);
+  }
+  :global(.cl__verdict) b { color: var(--text); font-weight: 600; }
+  .cl__verdict.is-bad { background: #16090b; }
+  :global(.cl__verdict.is-bad) b { color: #e88b8b; }
+  :global(.cl__verdict.is-bad) span { font-family: var(--mono); font-size: .8125rem; color: #e88b8b; white-space: nowrap; }
+  .cl__verdict.is-good { background: #0a1410; }
+  :global(.cl__verdict.is-good) b { color: var(--attribute); }
+
+  .cl__caveat {
+    margin: 0; padding: .75rem 1.25rem 1rem;
+    border-top: 1px solid var(--line);
+    font-size: .6875rem; line-height: 1.55; color: var(--text-faint);
+  }
+</style>

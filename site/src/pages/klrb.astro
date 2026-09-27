@@ -1,0 +1,91 @@
+---
+import Base from '../layouts/Base.astro';
+import ProjectHeader from '../components/ProjectHeader.astro';
+import ConfidentLiar from '../components/ConfidentLiar.astro';
+import { PROJECTS } from '../data/site';
+
+const p = PROJECTS.find((x) => x.slug === 'klrb')!;
+const others = PROJECTS.filter((o) => o.featured && o.slug !== 'klrb');
+---
+
+<Base
+  title="KLRB — measuring whether an LLM read the evidence"
+  description="KLRB injects chaos into live Kubernetes clusters and measures whether an LLM's root-cause analysis is actually grounded in the cluster evidence. Remove the evidence; if the conclusion doesn't move, it was never being read."
+  accent="evaluate"
+  path="/klrb"
+>
+  <ProjectHeader p={p} />
+
+  <!-- THE DEMO. This is the one thing on the site worth a scroll. -->
+  <section class="wrap" style="padding-top:1.5rem">
+    <p class="eyebrow">Try the ablation</p>
+    <p style="max-width:56ch;color:var(--text-dim);margin-bottom:1.75rem">
+      One Kubernetes incident, three conditions. Take away the evidence that justifies the
+      model's answer and watch what the answer does. This takes about ten seconds and it is
+      the entire finding.
+    </p>
+
+    <ConfidentLiar />
+  </section>
+
+  <section class="wrap" style="padding-top:2.5rem">
+    <p class="eyebrow">Why this measurement and not accuracy</p>
+    <div class="prose">
+      <p>
+        You can score an incident responder on whether its answer matched the label. That
+        number looks fine and tells you almost nothing, because on a corpus of common
+        Kubernetes failures a model can reach it from priors alone —
+        <code class="mono">CrashLoopBackOff</code> on a pod with a low memory limit is an OOMKill
+        often enough that guessing pays.
+      </p>
+      <p>
+        An accuracy score cannot separate a responder that read your cluster from one that
+        recognised the shape of your pod name. In production that difference is everything:
+        the first one generalises to your weird outage, the second one is confidently wrong
+        precisely when you need it most.
+      </p>
+      <p>
+        So KLRB scores the <em>dependency</em> instead of the answer. Run the scenario with the
+        causal evidence, run it without, and compare. If the conclusion survives the removal
+        of its own justification, the justification was decorative. I call the failure mode the
+        <b>Confident Liar</b> effect — not because the model intends to mislead, but because
+        fluency and groundedness turn out to be independent, and only one of them is visible
+        in the output.
+      </p>
+    </div>
+  </section>
+
+  <section class="wrap" style="padding-top:1rem">
+    <p class="eyebrow">How it is built</p>
+    <ul class="evidence">
+      {p.bullets.map((b) => <li set:html={b} />)}
+    </ul>
+
+    <div style="margin-top:2.5rem">
+      <p class="eyebrow">Scope — what this is not</p>
+      <p class="note note--scope">{p.scope}</p>
+      <p class="note" style="margin-top:1rem">
+        The open questions I would want a reviewer to press on: scenario count and seeds per
+        condition, whether the ablation control removes the evidence or merely corrupts it
+        (both are implemented, they measure different things), and how much of the effect is
+        the model versus my prompt's log formatting. A preprint is in progress and these are
+        the sections that matter.
+      </p>
+    </div>
+  </section>
+
+  <section class="wrap" style="border-top:1px solid var(--line)">
+    <p class="eyebrow">Elsewhere in the system</p>
+    <div class="grid grid--2" style="max-width:62rem">
+      {others.map((o) => (
+        <a class="card" href={`/${o.slug}`} style={`--c:var(--${o.plane})`}>
+          <div class="card__top">
+            <span class="card__name">{o.name}</span>
+            <span class="badge badge--plane" style={`--c:var(--${o.plane})`}>{o.planeLabel}</span>
+          </div>
+          <p class="card__line">{o.oneLine}</p>
+        </a>
+      ))}
+    </div>
+  </section>
+</Base>

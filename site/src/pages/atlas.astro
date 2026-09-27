@@ -1,0 +1,76 @@
+---
+import Base from '../layouts/Base.astro';
+import ProjectHeader from '../components/ProjectHeader.astro';
+import Attenuate from '../components/Attenuate.astro';
+import { PROJECTS } from '../data/site';
+
+const p = PROJECTS.find((x) => x.slug === 'atlas')!;
+const others = PROJECTS.filter((o) => o.featured && o.slug !== 'atlas');
+---
+
+<Base
+  title="Atlas — capability delegation for AI agents"
+  description="Atlas replaces the shared API key an AI agent uses with a scoped, attenuable capability token bound to its SPIFFE workload identity — verified offline, with no network hop on the authorization path."
+  accent="authorize"
+  path="/atlas"
+>
+  <ProjectHeader p={p} />
+
+  <section class="wrap" style="padding-top:1.5rem">
+    <p class="eyebrow">Narrow it. Then try to widen it.</p>
+    <p style="max-width:56ch;color:var(--text-dim);margin-bottom:1.75rem">
+      An agent holding a token can hand a weaker one to the next hop without asking anyone.
+      What it cannot do — at all, by construction rather than by policy — is hand out a
+      stronger one. Four clicks to see why that matters.
+    </p>
+
+    <Attenuate />
+  </section>
+
+  <section class="wrap" style="padding-top:2.5rem">
+    <p class="eyebrow">Why not just use an API key</p>
+    <div class="prose">
+      <p>
+        The default way to let an agent call a tool is to give it a key. That key is
+        bearer-authority: whoever holds it has everything it can do, for as long as it
+        lives, from anywhere. When the agent passes work to a sub-agent it passes the whole
+        key, because a key has no smaller version of itself.
+      </p>
+      <p>
+        Workload identity fixes who the caller is; SPIRE issues an SVID that says
+        <em>this process, on this node, in this namespace</em>. Capabilities fix what it may
+        do. Atlas joins the two: the token names the workload it was minted for, and a
+        verifier checks both without calling anything — which matters, because an
+        authorization check on the network path is a dependency that fails during exactly
+        the incidents you built the agent to handle.
+      </p>
+    </div>
+  </section>
+
+  <section class="wrap" style="padding-top:1rem">
+    <p class="eyebrow">What is actually interesting about it</p>
+    <ul class="evidence">
+      {p.bullets.map((b) => <li set:html={b} />)}
+    </ul>
+
+    <div style="margin-top:2.5rem">
+      <p class="eyebrow">Scope — what this is not</p>
+      <p class="note note--scope">{p.scope}</p>
+    </div>
+  </section>
+
+  <section class="wrap" style="border-top:1px solid var(--line)">
+    <p class="eyebrow">Elsewhere in the system</p>
+    <div class="grid grid--2" style="max-width:62rem">
+      {others.map((o) => (
+        <a class="card" href={`/${o.slug}`} style={`--c:var(--${o.plane})`}>
+          <div class="card__top">
+            <span class="card__name">{o.name}</span>
+            <span class="badge badge--plane" style={`--c:var(--${o.plane})`}>{o.planeLabel}</span>
+          </div>
+          <p class="card__line">{o.oneLine}</p>
+        </a>
+      ))}
+    </div>
+  </section>
+</Base>

@@ -1,0 +1,60 @@
+---
+import Base from '../layouts/Base.astro';
+import ProjectHeader from '../components/ProjectHeader.astro';
+import { PROJECTS } from '../data/site';
+
+export function getStaticPaths() {
+  // /klrb and /atlas have their own pages — they carry the interactive demos.
+  const OWN = new Set(['klrb', 'atlas']);
+  return PROJECTS.filter((p) => !OWN.has(p.slug)).map((p) => ({
+    params: { slug: p.slug },
+    props: { p },
+  }));
+}
+const { p } = Astro.props;
+const others = PROJECTS.filter((o) => o.slug !== p.slug && o.featured).slice(0, 3);
+---
+
+<Base title={p.name} description={p.oneLine} accent={p.plane} path={`/${p.slug}`}>
+  <ProjectHeader p={p} />
+
+  <section class="wrap" style="padding-top:1.5rem">
+    <p class="eyebrow">What is actually interesting about it</p>
+    <ul class="evidence">
+      {p.bullets.map((b) => <li set:html={b} />)}
+    </ul>
+
+    {p.slug === 'tf-why' && (
+      <div class="note" style="margin-top:2rem;border-left-color:#6b5320;background:#140f04;padding:1rem;border-radius:0 var(--r) var(--r) 0">
+        <span class="badge badge--warn" style="margin-bottom:.625rem">Status note</span>
+        <p style="margin:0;color:var(--text-dim)">
+          The repository is packaged and ready to publish — <code class="mono">pyproject.toml</code>,
+          tests and docs are in place — but <b>it is not on PyPI yet</b>, so
+          <code class="mono">pip install tf-why</code> will not work today. Install from source until
+          it is. An earlier version of this site claimed otherwise; that was wrong, and I would rather
+          you find the correction here than find the 404 yourself.
+        </p>
+      </div>
+    )}
+
+    <div style="margin-top:2.5rem">
+      <p class="eyebrow">Scope — what this is not</p>
+      <p class="note note--scope">{p.scope}</p>
+    </div>
+  </section>
+
+  <section class="wrap" style="border-top:1px solid var(--line)">
+    <p class="eyebrow">Elsewhere in the system</p>
+    <div class="grid grid--2" style="max-width:62rem">
+      {others.map((o) => (
+        <a class="card" href={`/${o.slug}`} style={`--c:var(--${o.plane})`}>
+          <div class="card__top">
+            <span class="card__name">{o.name}</span>
+            <span class="badge badge--plane" style={`--c:var(--${o.plane})`}>{o.planeLabel}</span>
+          </div>
+          <p class="card__line">{o.oneLine}</p>
+        </a>
+      ))}
+    </div>
+  </section>
+</Base>
