@@ -1,149 +1,234 @@
 ---
 import Base from '../layouts/Base.astro';
-import ControlPlane from '../components/ControlPlane.astro';
 import Cluster from '../components/Cluster.astro';
-import { PROFILE, EDUCATION, CERTIFICATIONS, SKILLS, PROJECTS, OTHER, TOTAL_STARS } from '../data/site';
+import { PROFILE, EDUCATION, CERTIFICATIONS, PROJECTS, FEATURED, TOTAL_STARS } from '../data/site';
 
-const tfwhy = PROJECTS.find((p) => p.slug === 'tf-why')!;
-const desc =
-  'Raj Patil — backend and AI-infrastructure engineer in Pune. I build the control plane for AI agents: capability authorization bound to workload identity, an incident-response pipeline behind a human approval gate, and a Kubernetes benchmark that measures whether an LLM actually read the evidence.';
+const words = (t: string) => t.split(' ');
+
+const PLANES = [
+  { slug: 'atlas', plane: 'authorize', name: 'Atlas', line: 'A token that can only ever get narrower. Bound to the workload that holds it, checked without a network call.' },
+  { slug: 'aisre', plane: 'act', name: 'AISRE', line: 'An agent that investigates a live failure, proposes a cause, and cannot touch anything until a human says so.' },
+  { slug: 'klrb', plane: 'evaluate', name: 'KLRB', line: 'The part that asks whether the agent actually read the evidence, or just guessed fluently.' },
+];
+
+const EVIDENCE = [
+  ['event', 'Killing container checkout-api: OOMKilled (exit 137)'],
+  ['log', 'fatal: runtime: out of memory — cannot allocate 24MB'],
+  ['log', 'handler.go:212 request buffer grew to 241MB'],
+  ['metric', 'memory_working_set → 256Mi (limit 256Mi)'],
+];
+
+const desc = 'Raj Patil — backend and AI-infrastructure engineer. I build the control plane for AI agents: capability authorization bound to workload identity, an incident-response pipeline behind a human approval gate, and a Kubernetes benchmark that measures whether an LLM actually read the evidence.';
 ---
 
 <Base title="Home" description={desc} path="/">
-  <!-- ABOVE THE FOLD: the claim, the proof it is checkable, then a running cluster. -->
-  <section class="wrap" style="padding-block:2.5rem 1rem">
-    <p class="eyebrow" style="margin-bottom:1.25rem">
-      {PROFILE.title} · {PROFILE.location}
-    </p>
+  <Cluster />
 
-    <h1 style="max-width:26ch">I build the control plane for AI agents.</h1>
+  <div class="acts">
 
-    <p class="lede" style="max-width:60ch;margin-top:1.125rem">
-      What an agent is allowed to do, and whether you can trust what it concluded.
-      Below is a running service graph. Break it, and watch an agent diagnose the
-      incident you just caused — then watch it keep that answer after you take the
-      evidence away.
-    </p>
+    <!-- ACT 0 — arrival -->
+    <section class="act wrap">
+      <p class="kicker rise rise--soon">{PROFILE.name} · {PROFILE.title} · {PROFILE.location}</p>
 
-    <div style="display:flex;flex-wrap:wrap;gap:1.25rem;align-items:center;margin:1.5rem 0 1.75rem">
-      <div class="btn-row">
-        <a class="btn btn--primary" href={PROFILE.links.resume}>Résumé (PDF)</a>
+      <h1 class="huge words">
+        {words('I build the control plane for AI agents.').map((w, i) => (
+          <span style={`--i:${i}`}>{w}&nbsp;</span>
+        ))}
+      </h1>
+
+      <p class="lede-xl rise rise--late" style="margin-top:2.2rem">
+        Authorization, action, evaluation — three services that call each other.
+        The cluster behind this page is running. Keep scrolling and you will break it.
+      </p>
+
+      <div class="btn-row rise rise--late" style="margin-top:2.5rem">
+        <a class="btn btn--primary" href={PROFILE.links.resume}>Résumé</a>
         <a class="btn" href={PROFILE.links.github} rel="me">GitHub</a>
-        <a class="btn" href={`mailto:${PROFILE.email}`}>{PROFILE.email}</a>
+        <a class="btn" href={`mailto:${PROFILE.email}`}>Email</a>
       </div>
-      <div class="facts">
-        <span><b>{TOTAL_STARS}★</b> across 6 tools</span>
-        <span><b>AWS</b> SA Associate</span>
-        <span><b>{PROFILE.graduated}</b></span>
-      </div>
-    </div>
 
-    <Cluster />
+      <p class="cue"><i></i> scroll</p>
+    </section>
 
-    <p class="mono faint" style="font-size:.6875rem;margin-top:.875rem;max-width:64ch">
-      Not a video and not a mock-up — a service graph simulated in the page, with the fault
-      types and evidence taken from KLRB's scenarios. {PROFILE.status}.
-    </p>
-  </section>
-
-  <!-- THE SYSTEM -->
-  <section class="wrap" style="padding-top:2rem">
-    <p class="eyebrow">The system</p>
-    <p style="max-width:58ch;color:var(--text-dim);margin-bottom:2.5rem">
-      Three of these are not separate projects. They are one control plane, built in the order
-      I discovered I needed them — and they call each other. Every box below is a repository
-      you can read.
-    </p>
-
-    <ControlPlane />
-  </section>
-
-  <!-- ADJACENT: honest about not being in the same path -->
-  <section class="wrap" style="padding-top:1rem">
-    <p class="eyebrow">Adjacent — same question, one layer down</p>
-    <a class="card" href={`/${tfwhy.slug}`} style="--c:var(--attribute);max-width:46rem">
-      <div class="card__top">
-        <span class="card__name">{tfwhy.name}</span>
-        <span class="badge badge--plane" style="--c:var(--attribute)">attribute</span>
-      </div>
-      <p class="card__line">{tfwhy.oneLine}</p>
-      <div class="card__stack">
-        {tfwhy.stack.join(' · ')} <span class="stars" style="margin-left:.5rem">★ {tfwhy.stars}</span>
-      </div>
-    </a>
-    <p class="note" style="margin-top:1rem;--c:var(--attribute)">
-      Atlas asks whether a caller <em>may</em> act. tf.why asks who already <em>did</em>.
-      It does not wire into the pipeline above — it is a standalone CLI, and I would rather say so
-      than draw an arrow that isn't there.
-    </p>
-  </section>
-
-  <!-- EVERYTHING ELSE, compact and unembellished -->
-  <section class="wrap">
-    <p class="eyebrow">Earlier work</p>
-    <div class="grid grid--2" style="max-width:62rem">
-      {OTHER.map((p) => (
-        <a class="card" href={`/${p.slug}`} style={`--c:var(--${p.plane})`}>
-          <div class="card__top">
-            <span class="card__name">{p.name}</span>
-            <span class="stars">★ <b>{p.stars}</b></span>
-          </div>
-          <p class="card__line">{p.oneLine}</p>
-          <div class="card__stack">{p.stack.slice(0, 4).join(' · ')}</div>
+    <!-- ACT 1 — the system -->
+    <section class="act wrap">
+      <p class="kicker rise">The system · {TOTAL_STARS}★ open source</p>
+      {PLANES.map((p) => (
+        <a class="plane rise" href={`/${p.slug}`} style={`--p:var(--${p.plane})`}>
+          <span class="plane__label">{p.plane}</span>
+          <span class="plane__name big">{p.name}</span>
+          <span class="plane__line">{p.line}</span>
         </a>
       ))}
-    </div>
-    <p class="note" style="margin-top:1.25rem">
-      There are ~60 repositories on my GitHub. These six are the ones worth your time; the rest are
-      coursework, forks and experiments, and I would rather point you at four good things than forty.
-    </p>
-  </section>
+    </section>
 
-  <!-- BACKGROUND: the fields a screener is paid to extract, in one place -->
-  <section class="wrap">
-    <p class="eyebrow">Background</p>
-    <div class="grid grid--2" style="max-width:62rem;gap:2.5rem">
-      <div>
-        <h3 style="margin-bottom:.75rem">Education</h3>
-        <p style="color:var(--text-dim);margin:0">
-          <b style="color:var(--text)">{EDUCATION.institution}</b><br />
-          {EDUCATION.degree}<br />
-          <span class="mono faint" style="font-size:.8125rem">{EDUCATION.duration} · CGPA {EDUCATION.cgpa}</span>
-        </p>
+    <!-- ACT 2 — the incident. Scrolling here kills a replica. -->
+    <section class="act wrap" data-trigger="inject">
+      <p class="kicker rise">00:00:00 — a replica dies</p>
+      <h2 class="huge words" style="color:var(--fail)">
+        {words('OOMKilled.').map((w, i) => <span style={`--i:${i}`}>{w}&nbsp;</span>)}
+      </h2>
+      <p class="lede-xl rise" style="margin-top:2rem">
+        One of three <span class="mono">checkout-api</span> replicas is gone, and Kubernetes
+        has not taken it out of the service yet. So it keeps getting its share of the traffic.
+      </p>
+      <p class="numeral rise rise--late" data-count="33" style="margin-top:3vh;color:var(--fail)">0<span style="font-size:.42em">%</span></p>
+      <p class="kicker" style="margin:0">of requests are now failing</p>
+    </section>
 
-        <h3 style="margin:2rem 0 .75rem">Certifications</h3>
-        <ul class="evidence" style="--c:var(--line-bright)">
-          {CERTIFICATIONS.map((c) => <li>{c}</li>)}
-        </ul>
-      </div>
-
-      <div>
-        <h3 style="margin-bottom:1rem">Skills</h3>
-        {SKILLS.map((s) => (
-          <div style="margin-bottom:1.125rem">
-            <div class="mono faint" style="font-size:.6875rem;letter-spacing:.1em;text-transform:uppercase;margin-bottom:.375rem">
-              {s.group}
-            </div>
-            <div style="color:var(--text-dim);font-size:.9375rem">{s.items.join(', ')}</div>
-          </div>
+    <!-- ACT 3 — the investigation -->
+    <section class="act wrap">
+      <p class="kicker rise">00:00:02 — the agent wakes</p>
+      <h2 class="big rise">It reads the cluster.</h2>
+      <ul class="ev" data-evidence>
+        {EVIDENCE.map(([k, t]) => (
+          <li class="ev__i rise"><span class="ev__k">{k}</span><span class="ev__t">{t}</span></li>
         ))}
-      </div>
-    </div>
-  </section>
+      </ul>
+    </section>
 
-  <!-- CONTACT -->
-  <section class="wrap" style="border-top:1px solid var(--line)">
-    <h2>Hiring for backend, platform, or agent infrastructure?</h2>
-    <p style="max-width:52ch;color:var(--text-dim);margin-top:1rem">
-      I am looking for a first role where the hard part is correctness under adversarial conditions —
-      authorization, evaluation, incident response. Happy to walk you through the 12 deployment defects
-      the Atlas audit found, or why KLRB's ablation is the only honest way I know to score an
-      AI incident responder.
-    </p>
-    <div class="btn-row" style="margin-top:1.75rem">
-      <a class="btn btn--primary" href={`mailto:${PROFILE.email}?subject=Role%20enquiry`}>Email me</a>
-      <a class="btn" href={PROFILE.links.linkedin} rel="me">LinkedIn</a>
-      <a class="btn" href={PROFILE.links.resume}>Résumé (PDF)</a>
-    </div>
-  </section>
+    <!-- ACT 4 — the diagnosis -->
+    <section class="act wrap">
+      <p class="kicker rise">00:00:06 — root cause</p>
+      <blockquote class="rca rise">
+        The container was OOMKilled. Memory working set reached the 256Mi limit,
+        driven by an unbounded request buffer in the handler path.
+      </blockquote>
+      <p class="numeral rise rise--late" data-count="91" data-decimal style="margin-top:3vh;color:var(--evaluate)">0.00</p>
+      <p class="kicker" style="margin:0">stated confidence</p>
+    </section>
+
+    <!-- ACT 5 — the lie. The peak. -->
+    <section class="act act--tall wrap" data-trigger="ablate">
+      <p class="kicker rise">now delete the evidence and ask again</p>
+
+      <ul class="ev ev--gone">
+        {EVIDENCE.map(([k, t]) => (
+          <li class="ev__i"><span class="ev__k">{k}</span><span class="ev__t">{t}</span></li>
+        ))}
+      </ul>
+
+      <h2 class="huge words" style="margin-top:6vh">
+        {words("The answer didn't move.").map((w, i) => <span style={`--i:${i}`}>{w}&nbsp;</span>)}
+      </h2>
+
+      <p class="lede-xl rise rise--late" style="margin-top:2.2rem;max-width:44ch">
+        Same mechanism. Same confidence. Nothing left to justify it. A conclusion that survives
+        the removal of its own evidence was never reading the evidence — and you just watched it
+        happen to an incident you caused yourself.
+      </p>
+
+      <p class="rise rise--late" style="margin-top:2rem">
+        <a class="btn btn--primary" href="/klrb">I built a benchmark for this →</a>
+      </p>
+    </section>
+
+    <!-- WORK -->
+    <section class="act act--auto wrap">
+      <p class="kicker rise">Selected work</p>
+      {PROJECTS.map((p) => (
+        <a class="work" href={`/${p.slug}`} style={`--p:var(--${p.plane})`}>
+          <div class="work__in">
+            <span class="work__name">{p.name}<span class="work__plane">{p.plane}</span></span>
+            <p class="work__line">{p.oneLine}</p>
+            <span class="work__stars">{p.stars > 5 ? <><b>{p.stars}</b>★</> : 'new'}</span>
+          </div>
+        </a>
+      ))}
+    </section>
+
+    <!-- BACKGROUND -->
+    <section class="act act--auto wrap">
+      <p class="kicker rise">Background</p>
+      <div class="bg-grid rise">
+        <div>
+          <b>{EDUCATION.institution}</b>
+          <span>{EDUCATION.degree}</span>
+          <span class="mono faint">{EDUCATION.duration}</span>
+        </div>
+        <div>
+          <b>Certified</b>
+          {CERTIFICATIONS.map((c) => <span>{c}</span>)}
+        </div>
+        <div>
+          <b>Works in</b>
+          <span>Go · Python · Kubernetes · AWS</span>
+          <span>SPIFFE/SPIRE · gRPC · MCP · Terraform</span>
+          <span class="mono faint">{PROFILE.status}</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- CONTACT -->
+    <section class="act wrap">
+      <p class="kicker rise">Contact</p>
+      <h2 class="huge words">
+        {words('Let me break something for you.').map((w, i) => <span style={`--i:${i}`}>{w}&nbsp;</span>)}
+      </h2>
+      <p class="lede-xl rise rise--late" style="margin-top:2rem">
+        Looking for a first role where the hard part is correctness under adversarial
+        conditions — authorization, evaluation, incident response.
+      </p>
+      <div class="btn-row rise rise--late" style="margin-top:2.5rem">
+        <a class="btn btn--primary" href={`mailto:${PROFILE.email}`}>{PROFILE.email}</a>
+        <a class="btn" href={PROFILE.links.linkedin} rel="me">LinkedIn</a>
+        <a class="btn" href={PROFILE.links.resume}>Résumé</a>
+      </div>
+    </section>
+
+  </div>
 </Base>
+
+<script>
+  // The page drives the narrative; the cluster owns the simulation. Acts fire
+  // events as they arrive, and nothing here knows how the renderer works.
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)');
+
+  const fire = (name: string) => document.dispatchEvent(new CustomEvent('cluster:' + name));
+
+  const acts = document.querySelectorAll<HTMLElement>('[data-trigger]');
+  if (acts.length) {
+    const io = new IntersectionObserver((entries) => {
+      for (const e of entries) {
+        if (!e.isIntersecting) continue;
+        fire(e.target.getAttribute('data-trigger')!);
+        io.unobserve(e.target);
+      }
+    }, { threshold: 0.35 });
+    acts.forEach((a) => io.observe(a));
+  }
+
+  // Count-ups. The real value is in the markup for anyone without JS; this
+  // only animates the way there.
+  for (const el of document.querySelectorAll<HTMLElement>('[data-count]')) {
+    const target = Number(el.dataset.count);
+    const dec = el.hasAttribute('data-decimal');
+    const suffix = el.querySelector('span');
+    const render = (v: number) => {
+      el.textContent = dec ? (v / 100).toFixed(2) : String(Math.round(v));
+      if (suffix) el.appendChild(suffix);
+    };
+    if (reduced.matches) { render(target); continue; }
+    render(0);
+    new IntersectionObserver((es, o) => {
+      if (!es[0].isIntersecting) return;
+      o.disconnect();
+      const t0 = performance.now(), dur = 1100;
+      const tick = (now: number) => {
+        const t = Math.min(1, (now - t0) / dur);
+        render(target * (1 - Math.pow(1 - t, 3)));
+        if (t < 1) requestAnimationFrame(tick);
+      };
+      requestAnimationFrame(tick);
+    }, { threshold: 0.5 }).observe(el);
+  }
+
+  // The evidence in the final act strikes through one line at a time once the
+  // cluster reports the ablation.
+  document.addEventListener('cluster:phase', (e) => {
+    const { phase } = (e as CustomEvent).detail;
+    if (phase !== 'ablated') return;
+    const items = document.querySelectorAll<HTMLElement>('.ev--gone .ev__i');
+    items.forEach((li, i) => setTimeout(() => li.classList.add('is-gone'), reduced.matches ? 0 : 160 * i));
+  });
+</script>

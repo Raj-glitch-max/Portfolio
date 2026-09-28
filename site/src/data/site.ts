@@ -155,7 +155,7 @@ export const PROJECTS: Project[] = [
   },
   {
     slug: 'self-healing-cicd',
-    name: 'AI Self-Healing CI/CD',
+    name: 'Self-Healing CI/CD',
     plane: 'act',
     planeLabel: 'Act',
     oneLine:

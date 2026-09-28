@@ -293,3 +293,337 @@ section { padding-block: clamp(3rem, 8vw, 5.5rem); }
   a[href^="http"]::after { content: " (" attr(href) ")"; font-size: 8pt; color: #555; }
   section { padding-block: 1rem; }
 }
+
+/* ===============================================================
+   THE INCIDENT — scale, motion, acts
+   ---------------------------------------------------------------
+   Motion is CSS scroll-driven animation, which runs on the
+   compositor rather than the main thread. Everything below is
+   progressive enhancement: without `animation-timeline` support
+   (Firefox today) the page is simply already in its final state,
+   fully visible and fully readable.
+   =============================================================== */
+
+:root {
+  --ink: #f4f6f7;
+  --fail: #ff4d4d;
+  --ease: cubic-bezier(.22, 1, .36, 1);
+}
+
+/* ---- full-bleed stage: the cluster lives behind everything ---- */
+
+.stagefix {
+  position: fixed; inset: 0; z-index: 0;
+  pointer-events: none;
+}
+.stagefix canvas { width: 100%; height: 100%; display: block; }
+
+/* Content rides above the fixed cluster. */
+.acts { position: relative; z-index: 2; }
+
+/* ---- an act ---- */
+
+.act {
+  min-height: 100svh;
+  display: flex; flex-direction: column; justify-content: center;
+  padding-block: 14vh;
+  position: relative;
+}
+.act--tall { min-height: 170svh; }
+.act--auto { min-height: 0; padding-block: 12vh; }
+
+/* ---- display scale ---- */
+
+.huge {
+  font-family: var(--display);
+  font-weight: 600;
+  font-size: clamp(2.6rem, 8.6vw, 8.5rem);
+  line-height: .92;
+  letter-spacing: -.045em;
+  margin: 0;
+  text-wrap: balance;
+}
+.big {
+  font-family: var(--display);
+  font-weight: 600;
+  font-size: clamp(1.9rem, 4.6vw, 4rem);
+  line-height: 1.02;
+  letter-spacing: -.035em;
+  margin: 0;
+  text-wrap: balance;
+}
+.lede-xl {
+  font-size: clamp(1.05rem, 1.9vw, 1.45rem);
+  line-height: 1.45;
+  color: var(--text-dim);
+  max-width: 34ch;
+  margin: 0;
+  text-wrap: pretty;
+}
+.kicker {
+  font-family: var(--mono);
+  font-size: clamp(.625rem, .9vw, .75rem);
+  letter-spacing: .28em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  margin: 0 0 1.5rem;
+}
+
+/* Numerals want tabular figures and tight tracking at size. */
+.numeral {
+  font-family: var(--display);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  letter-spacing: -.05em;
+  line-height: .82;
+  font-size: clamp(4rem, 16vw, 15rem);
+  display: block;
+}
+
+/* ---- word-by-word display reveal ---- */
+
+.words { display: block; }
+.words > span {
+  display: inline-block;
+  will-change: transform, opacity;
+}
+
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .words > span {
+      opacity: 0;
+      transform: translateY(.42em) rotate(1.2deg);
+      animation: wordIn .01s linear both;
+      animation-timeline: view();
+      animation-range: entry 4% cover 22%;
+      animation-delay: calc(var(--i, 0) * 0.04s);
+    }
+    /* A word animating on a view timeline ignores animation-delay, so the
+       stagger comes from shifting each word's range instead. */
+    .words > span:nth-child(1) { animation-range: entry 2% cover 14%; }
+    .words > span:nth-child(2) { animation-range: entry 4% cover 16%; }
+    .words > span:nth-child(3) { animation-range: entry 6% cover 18%; }
+    .words > span:nth-child(4) { animation-range: entry 8% cover 20%; }
+    .words > span:nth-child(5) { animation-range: entry 10% cover 22%; }
+    .words > span:nth-child(6) { animation-range: entry 12% cover 24%; }
+    .words > span:nth-child(7) { animation-range: entry 14% cover 26%; }
+    .words > span:nth-child(8) { animation-range: entry 16% cover 28%; }
+    .words > span:nth-child(n+9) { animation-range: entry 18% cover 30%; }
+
+    /* generic rise */
+    .rise {
+      opacity: 0; transform: translateY(1.6rem);
+      animation: riseIn .01s linear both;
+      animation-timeline: view();
+      animation-range: entry 6% cover 30%;
+    }
+    .rise--late { animation-range: entry 14% cover 42%; }
+    .rise--soon { animation-range: entry 0% cover 18%; }
+
+    /* a rule that draws itself */
+    .draw {
+      transform: scaleX(0); transform-origin: left;
+      animation: drawIn .01s linear both;
+      animation-timeline: view();
+      animation-range: entry 8% cover 40%;
+    }
+  }
+}
+
+@keyframes wordIn { to { opacity: 1; transform: none; } }
+@keyframes riseIn { to { opacity: 1; transform: none; } }
+@keyframes drawIn { to { transform: scaleX(1); } }
+
+/* ---- the page itself reacts when the cluster is failing ---- */
+
+body { transition: background-color .9s var(--ease); }
+body[data-incident='failing'] { background-color: #0b0708; }
+body[data-incident='failing'] .rule { background: #3a1c1c; }
+
+.rule { height: 1px; background: var(--line); width: 100%; }
+
+/* ---- scroll cue ---- */
+
+.cue {
+  position: absolute; bottom: 5vh; left: 0;
+  font-family: var(--mono); font-size: .6875rem;
+  letter-spacing: .24em; text-transform: uppercase; color: var(--text-faint);
+  display: flex; align-items: center; gap: .75rem;
+}
+.cue i {
+  display: block; width: 46px; height: 1px; background: var(--line-bright);
+  transform-origin: left;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .cue i { animation: cueSlide 2.4s var(--ease) infinite; }
+}
+@keyframes cueSlide {
+  0%, 100% { transform: scaleX(.3); opacity: .4; }
+  50% { transform: scaleX(1); opacity: 1; }
+}
+
+/* ---- work rows: full-bleed, large, hover-alive ---- */
+
+.work { border-top: 1px solid var(--line); display: block; text-decoration: none; }
+.work:last-of-type { border-bottom: 1px solid var(--line); }
+.work__in {
+  display: grid; gap: .5rem 2rem; align-items: baseline;
+  padding: clamp(1.5rem, 3.4vw, 2.75rem) 0;
+  grid-template-columns: 1fr;
+  transition: padding-left .45s var(--ease);
+}
+@media (min-width: 52rem) {
+  .work__in { grid-template-columns: minmax(0, 15rem) minmax(0, 1fr) auto; align-items: center; }
+}
+.work:hover .work__in { padding-left: clamp(.5rem, 1.6vw, 1.5rem); }
+
+.work__name {
+  font-family: var(--display); font-weight: 600;
+  font-size: clamp(1.6rem, 3.4vw, 2.9rem);
+  letter-spacing: -.035em; line-height: 1;
+  color: var(--text); transition: color .3s;
+  display: flex; align-items: baseline; gap: .6rem;
+}
+.work:hover .work__name { color: #fff; }
+.work__plane {
+  font-family: var(--mono); font-size: .625rem; letter-spacing: .18em;
+  text-transform: uppercase; color: var(--p);
+}
+.work__line { color: var(--text-dim); font-size: .9375rem; line-height: 1.45; max-width: 46ch; margin: 0; }
+.work__stars { font-family: var(--mono); font-size: 1rem; color: var(--text-faint); white-space: nowrap; }
+.work__stars b { color: var(--text); font-size: 1.4rem; font-weight: 500; }
+
+/* A hairline that sweeps the row on hover, in the project's own colour. */
+.work { position: relative; overflow: hidden; }
+.work::after {
+  content: ''; position: absolute; left: 0; bottom: 0; height: 1px; width: 100%;
+  background: var(--p); transform: scaleX(0); transform-origin: left;
+  transition: transform .55s var(--ease);
+}
+.work:hover::after { transform: scaleX(1); }
+
+/* ---- act 1: the three planes ---- */
+
+.plane {
+  display: grid; gap: .35rem 2.2rem; text-decoration: none;
+  padding: clamp(1.4rem, 3vw, 2.4rem) 0;
+  border-top: 1px solid var(--line);
+  position: relative;
+}
+.plane:last-of-type { border-bottom: 1px solid var(--line); }
+@media (min-width: 52rem) {
+  .plane { grid-template-columns: 8.5rem minmax(0, 15rem) minmax(0, 1fr); align-items: baseline; }
+}
+.plane__label {
+  font-family: var(--mono); font-size: .625rem; letter-spacing: .24em;
+  text-transform: uppercase; color: var(--p);
+}
+.plane__name { color: var(--text); transition: transform .5s var(--ease), color .3s; }
+.plane__line { color: var(--text-dim); font-size: 1rem; line-height: 1.5; max-width: 42ch; }
+.plane::after {
+  content: ''; position: absolute; left: 0; bottom: -1px; height: 1px; width: 100%;
+  background: var(--p); transform: scaleX(0); transform-origin: left;
+  transition: transform .6s var(--ease);
+}
+.plane:hover::after { transform: scaleX(1); }
+.plane:hover .plane__name { color: #fff; transform: translateX(.4rem); }
+
+/* ---- acts 3 & 5: evidence ---- */
+
+.ev { list-style: none; margin: 4vh 0 0; padding: 0; }
+.ev__i {
+  display: grid; gap: .25rem 1.25rem; align-items: baseline;
+  padding: .8rem 0; border-bottom: 1px solid var(--line);
+  font-family: var(--mono);
+  font-size: clamp(.8125rem, 1.5vw, 1.0625rem);
+  transition: opacity .5s var(--ease), filter .5s var(--ease);
+}
+@media (min-width: 46rem) { .ev__i { grid-template-columns: 5.5rem minmax(0, 1fr); } }
+.ev__k {
+  font-size: .625rem; letter-spacing: .2em; text-transform: uppercase;
+  color: var(--text-faint);
+}
+.ev__t { color: var(--text-dim); overflow-wrap: anywhere; }
+
+.ev--gone .ev__i.is-gone { opacity: .34; filter: saturate(.25); }
+.ev--gone .ev__i .ev__t { position: relative; }
+.ev--gone .ev__i .ev__t::after {
+  content: ''; position: absolute; left: 0; top: 52%; height: 2px; width: 100%;
+  background: var(--fail); transform: scaleX(0); transform-origin: left;
+  transition: transform .5s var(--ease);
+}
+.ev--gone .ev__i.is-gone .ev__t::after { transform: scaleX(1); }
+
+/* ---- act 4: the model's answer ---- */
+
+.rca {
+  margin: 4vh 0 0; padding: 0 0 0 clamp(1rem, 2.5vw, 2rem);
+  border-left: 2px solid var(--evaluate);
+  font-family: var(--display); font-weight: 500;
+  font-size: clamp(1.25rem, 3vw, 2.4rem);
+  line-height: 1.22; letter-spacing: -.025em;
+  color: var(--text); max-width: 24ch; text-wrap: pretty;
+}
+
+/* ---- background strip ---- */
+
+.bg-grid { display: grid; gap: 2.5rem; margin-top: 3vh; }
+@media (min-width: 52rem) { .bg-grid { grid-template-columns: repeat(3, 1fr); } }
+.bg-grid > div { display: flex; flex-direction: column; gap: .4rem; }
+.bg-grid b {
+  font-family: var(--mono); font-size: .625rem; letter-spacing: .22em;
+  text-transform: uppercase; color: var(--text-faint); font-weight: 400;
+  margin-bottom: .5rem;
+}
+.bg-grid span { color: var(--text-dim); font-size: .9375rem; line-height: 1.45; }
+.bg-grid .faint { font-size: .75rem; }
+
+/* The nav sits above the fixed stage. */
+.nav { z-index: 20; }
+
+/* ---- keeping copy readable over a live cluster ----
+   The graph streams behind everything, which is the point, but body text sitting
+   on top of moving traffic is unreadable. A directional scrim protects the
+   column the copy occupies and leaves the right of the frame open, so the
+   cluster still carries the composition. */
+
+/* The scrim sits behind the act's own content but still inside `.acts`, which
+   is its own stacking context — so it covers the fixed cluster without needing
+   to reposition every child. An earlier version forced `position: relative` on
+   `.act > *`, which quietly broke the absolutely-positioned scroll cue. */
+.act::before {
+  content: '';
+  position: absolute; inset: -8vh -4vw;
+  z-index: -1;
+  pointer-events: none;
+  background: linear-gradient(101deg,
+    rgba(8, 9, 10, .94) 0%,
+    rgba(8, 9, 10, .90) 32%,
+    rgba(8, 9, 10, .66) 54%,
+    rgba(8, 9, 10, .22) 74%,
+    rgba(8, 9, 10, 0) 88%);
+}
+/* The work and background acts are dense text, so they get a flat scrim. */
+.act--auto::before {
+  z-index: -1;
+  background: linear-gradient(180deg,
+    rgba(8, 9, 10, 0) 0%, rgba(8, 9, 10, .93) 6%,
+    rgba(8, 9, 10, .93) 94%, rgba(8, 9, 10, 0) 100%);
+}
+
+/* Copy sits over light: lift it off the dim grey it used on a flat background. */
+.lede-xl { color: #c3cace; }
+.plane__line, .work__line { color: #aab2b8; }
+
+/* The first act shares the viewport with the sticky nav, so it has to be that
+   much shorter or its scroll cue lands below the fold. */
+.act:first-of-type { min-height: calc(100svh - 52px); }
+
+/* Controls were scaled for the old type; next to display type this size they
+   read as an afterthought. */
+.btn {
+  font-size: .875rem;
+  padding: .7rem 1.15rem;
+  border-radius: 7px;
+}
+.btn--primary { letter-spacing: -.01em; }

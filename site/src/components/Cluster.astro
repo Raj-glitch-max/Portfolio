@@ -15,59 +15,21 @@
  */
 ---
 
-<div class="cx" data-cluster>
-  <div class="cx__stage">
-    <canvas class="cx__canvas" data-gl aria-hidden="true"></canvas>
-    <canvas class="cx__canvas" data-2d aria-hidden="true" hidden></canvas>
-    <div class="cx__labels" data-labels aria-hidden="true">
-      <span class="cx__lab" data-lab="0">ingress-nginx</span>
-      <span class="cx__lab" data-lab="1">api-gateway</span>
-      <span class="cx__lab" data-lab="2">checkout-api</span>
-      <span class="cx__lab" data-lab="3">postgres / redis</span>
-    </div>
+<div class="stagefix" data-cluster aria-hidden="true">
+  <canvas class="cx__canvas" data-gl></canvas>
+  <canvas class="cx__canvas" data-2d hidden></canvas>
+</div>
 
-    <p class="cx__fallback" data-fallback>
-      A live service graph: ingress → api-gateway → checkout-api → postgres/redis,
-      with traffic flowing between replicas. Inject a fault and an agent investigates it.
-    </p>
+<p class="cx__fallback" data-fallback hidden>
+  A live service graph — ingress to api-gateway to checkout-api to postgres and redis —
+  with traffic flowing between replicas.
+</p>
 
-    <div class="cx__hud">
-      <span class="cx__stat"><b data-rps>0</b> req/s</span>
-      <span class="cx__stat"><b data-err>0.0</b>% err</span>
-      <span class="cx__stat cx__stat--phase" data-phase>healthy</span>
-    </div>
-  </div>
-
-  <div class="cx__side">
-    <div class="cx__ctl">
-      <span class="cx__h">inject a fault</span>
-      <div class="cx__btns">
-        <button class="cx__b" data-fault="oom">OOMKill checkout-api</button>
-        <button class="cx__b" data-fault="crash">CrashLoopBackOff</button>
-        <button class="cx__b" data-fault="net">partition postgres</button>
-      </div>
-    </div>
-
-    <div class="cx__panel">
-      <div class="cx__h cx__h--row">
-        <span data-evtitle>evidence</span>
-        <span class="cx__cnt" data-evcount>—</span>
-      </div>
-      <ul class="cx__ev" data-ev>
-        <li class="cx__idle">waiting for an incident</li>
-      </ul>
-    </div>
-
-    <div class="cx__panel cx__panel--rca" data-rcawrap hidden>
-      <div class="cx__h">the agent's root cause</div>
-      <p class="cx__rca" data-rca></p>
-      <div class="cx__conf"><span>confidence</span><span data-conf>—</span></div>
-      <button class="cx__b cx__b--key" data-ablate hidden>now delete the evidence and ask again</button>
-      <output class="cx__verdict" data-verdict aria-live="polite"></output>
-    </div>
-
-    <button class="cx__reset" data-reset hidden>heal the cluster</button>
-  </div>
+<!-- Telemetry stays on screen the whole way down: the cluster is always running. -->
+<div class="tele" data-tele>
+  <span><b data-rps>0</b> req/s</span>
+  <span><b data-err>0.0</b>% err</span>
+  <span class="tele__p" data-phase>healthy</span>
 </div>
 
 <script>
@@ -157,7 +119,7 @@
     const cv2 = root.querySelector<HTMLCanvasElement>('[data-2d]')!;
     let cv: HTMLCanvasElement = cvGL;
     const $ = <T extends Element>(s: string) => root.querySelector<T>(s)!;
-    const elFallback = $<HTMLElement>('[data-fallback]');
+    const elFallback = document.querySelector<HTMLElement>('[data-fallback]')!;
 
     let gl = cvGL.getContext('webgl', { antialias: true, alpha: true, premultipliedAlpha: true, powerPreference: 'low-power' }) as WebGLRenderingContext | null;
     let prog = gl && program(gl, VS, FS);
@@ -183,14 +145,13 @@
     cvGL.addEventListener('webglcontextlost', (e) => { e.preventDefault(); fallback2D(); });
     if (!gl || !prog) { fallback2D(); } else { elFallback.hidden = true; }
 
-    const elRps = $<HTMLElement>('[data-rps]'), elErr = $<HTMLElement>('[data-err]');
-    const elPhase = $<HTMLElement>('[data-phase]');
-    const elEv = $<HTMLElement>('[data-ev]'), elEvCount = $<HTMLElement>('[data-evcount]');
-    const elEvTitle = $<HTMLElement>('[data-evtitle]');
-    const elRcaWrap = $<HTMLElement>('[data-rcawrap]'), elRca = $<HTMLElement>('[data-rca]');
-    const elConf = $<HTMLElement>('[data-conf]'), elAblate = $<HTMLButtonElement>('[data-ablate]');
-    const elVerdict = $<HTMLElement>('[data-verdict]'), elReset = $<HTMLButtonElement>('[data-reset]');
-    const labs = [...root.querySelectorAll<HTMLElement>('.cx__lab')];
+    // Telemetry lives outside the stage element now, so it is queried from the
+    // document rather than scoped to the stage — `$` would return null and the
+    // first frame would throw.
+    const elRps = document.querySelector<HTMLElement>('[data-rps]')!;
+    const elErr = document.querySelector<HTMLElement>('[data-err]')!;
+    const elPhase = document.querySelector<HTMLElement>('[data-phase]')!;
+    const tele = document.querySelector<HTMLElement>('[data-tele]');
 
     // GL plumbing, only when we actually have a context.
     let aPos = -1, aCol = -1, aSize = -1, buf: WebGLBuffer | null = null;
@@ -266,7 +227,7 @@
 
     function step(dt: number, now: number) {
       spawn += dt;
-      const rate = phase === 'healthy' ? 0.05 : 0.07;
+      const rate = phase === 'healthy' ? 0.024 : 0.034;
       while (spawn > rate) { spawn -= rate; emit(); }
 
       let bad = 0, ok = 0;
@@ -301,14 +262,35 @@
       elErr.textContent = err.toFixed(1);
     }
 
+    // A path rather than a pan: scrolling walks the camera through the graph —
+    // wide establishing shot, push inside the mesh, orbit the failing tier,
+    // then pull back out. [progress, radius, azimuth, elevation]
+    const PATH: [number, number, number, number, number, number][] = [
+      [0.00, 9.2, -0.52, 0.15, -1.9,  0.95],
+      [0.22, 5.6, -0.04, 0.10, -0.7,  0.35],
+      [0.46, 4.2,  0.86, 0.28,  0.4, -0.15],
+      [0.70, 6.4,  1.62, 0.40, -0.9,  0.55],
+      [1.00, 9.0,  2.30, 0.28, -1.6,  0.85],
+    ];
+    const smooth = (t: number) => t * t * (3 - 2 * t);
+
     function camera(now: number) {
-      // Scroll flies the camera around the topology; the pointer adds parallax;
-      // a slow drift keeps it alive when nobody is doing anything.
-      const az = -0.42 + scrollP * 1.05 + Math.sin(now * 0.00012) * 0.11 + ptrX * 0.26;
-      const el = 0.14 + scrollP * 0.34 + Math.sin(now * 0.00017) * 0.03 + ptrY * 0.16;
-      const R = 7.5 + scrollP * 2.6;
+      let i = 0;
+      while (i < PATH.length - 2 && scrollP > PATH[i + 1][0]) i++;
+      const a = PATH[i], b = PATH[i + 1];
+      const t = smooth(Math.max(0, Math.min(1, (scrollP - a[0]) / (b[0] - a[0] || 1))));
+      const lp = (x: number, y: number) => x + (y - x) * t;
+
+      // A slow drift and a little pointer parallax keep it alive when the page
+      // is still; neither is large enough to fight the scroll path.
+      const az = lp(a[2], b[2]) + Math.sin(now * 0.00012) * 0.09 + ptrX * 0.20;
+      const el = lp(a[3], b[3]) + Math.sin(now * 0.00017) * 0.025 + ptrY * 0.12;
+      const R = lp(a[1], b[1]);
+      const tx = lp(a[4], b[4]), ty = lp(a[5], b[5]);
       const ce = Math.cos(el);
-      lookAt(view, [Math.sin(az) * ce * R, Math.sin(el) * R, Math.cos(az) * ce * R], [0, 0, 0], [0, 1, 0]);
+      lookAt(view,
+        [tx + Math.sin(az) * ce * R, ty + Math.sin(el) * R, Math.cos(az) * ce * R],
+        [tx, ty, 0], [0, 1, 0]);
       perspective(proj, 0.82, W / H, 0.1, 60);
       mul(mvp, proj, view);
     }
@@ -353,7 +335,7 @@
       vbuf.length = 0;
       for (let t = 0; t < TIERS.length - 1; t++)
         for (const a of tierPods(t)) for (const b of tierPods(t + 1)) {
-          const hit = a.dead || b.dead, c = hit ? C.bad : C.edge, al = hit ? 0.26 : 0.30;
+          const hit = a.dead || b.dead, c = hit ? C.bad : C.edge, al = hit ? 0.55 : 0.42;
           pushV(vbuf, a.x, a.y, a.z, c, al, 1); pushV(vbuf, b.x, b.y, b.z, c, al, 1);
         }
       for (const p of parts) {
@@ -368,22 +350,22 @@
       vbuf.length = 0;
       for (const p of pods) {
         const c = p.dead ? C.bad : p.health < 0.85 ? C.warn : C.ok;
-        const a = p.dead ? 0.30 + Math.sin(p.pulse) * 0.22 : 0.11 + Math.sin(p.pulse) * 0.035;
-        pushV(vbuf, p.x, p.y, p.z, c, Math.max(0.02, a), p.dead ? 0.66 : 0.5);
+        const a = p.dead ? 0.55 + Math.sin(p.pulse) * 0.30 : 0.20 + Math.sin(p.pulse) * 0.06;
+        pushV(vbuf, p.x, p.y, p.z, c, Math.max(0.02, a), p.dead ? 0.95 : 0.74);
       }
       upload(vbuf, 1, gl.POINTS);
 
       vbuf.length = 0;
       for (const p of parts) {
         const [x, y, z] = lerp3(p.from, p.to, p.t);
-        pushV(vbuf, x, y, z, p.bad ? C.bad : C.ok, p.bad ? 1 : 0.8, 0.055);
+        pushV(vbuf, x, y, z, p.bad ? C.bad : C.ok, p.bad ? 1 : 0.9, 0.075);
       }
       upload(vbuf, 1, gl.POINTS);
 
       vbuf.length = 0;
       for (const p of pods) {
         const c = p.dead ? C.bad : p.health < 0.85 ? C.warn : C.ok;
-        pushV(vbuf, p.x, p.y, p.z, c, 1, 0.135);
+        pushV(vbuf, p.x, p.y, p.z, c, 1, 0.185);
       }
       upload(vbuf, 2, gl.POINTS);
 
@@ -415,7 +397,7 @@
           const pa = project(a.x, a.y, a.z), pb = project(b.x, b.y, b.z);
           if (!pa || !pb) continue;
           const hit = a.dead || b.dead;
-          ctx.strokeStyle = css(hit ? C.bad : C.edge, (hit ? 0.3 : 0.34) * depth((pa[2] + pb[2]) / 2));
+          ctx.strokeStyle = css(hit ? C.bad : C.edge, (hit ? 0.55 : 0.46) * depth((pa[2] + pb[2]) / 2));
           ctx.lineWidth = 1;
           ctx.beginPath(); ctx.moveTo(pa[0], pa[1]); ctx.lineTo(pb[0], pb[1]); ctx.stroke();
         }
@@ -437,8 +419,8 @@
         const s = project(p.x, p.y, p.z);
         if (!s) continue;
         const d = depth(s[2]), c = p.dead ? C.bad : p.health < 0.85 ? C.warn : C.ok;
-        const rad = (p.dead ? 30 : 23) * d, core = 7.5 * d;
-        const a = p.dead ? 0.34 + Math.sin(p.pulse) * 0.22 : 0.13 + Math.sin(p.pulse) * 0.04;
+        const rad = (p.dead ? 44 : 34) * d, core = 10 * d;
+        const a = p.dead ? 0.55 + Math.sin(p.pulse) * 0.28 : 0.22 + Math.sin(p.pulse) * 0.06;
         const g = ctx.createRadialGradient(s[0], s[1], 0, s[0], s[1], rad);
         g.addColorStop(0, css(c, Math.max(0.02, a)));
         g.addColorStop(1, css(c, 0));
@@ -460,7 +442,7 @@
         if (!s) continue;
         const d = depth(s[2]);
         ctx.fillStyle = css(p.bad ? C.bad : C.ok, (p.bad ? 1 : 0.85) * d);
-        ctx.beginPath(); ctx.arc(s[0], s[1], 1.9 * d, 0, 7); ctx.fill();
+        ctx.beginPath(); ctx.arc(s[0], s[1], 2.6 * d, 0, 7); ctx.fill();
       }
 
       if (sweep >= 0) {
@@ -500,20 +482,6 @@
     function draw(now: number) {
       camera(now);
       if (gl) { drawGL(); verifyGL(); } else { draw2D(); }
-      for (let ti = 0; ti < TIERS.length; ti++) {
-        const p = tierPods(ti)[0];
-        const s = p && project(p.x, -1.95, 0);
-        const el = labs[ti];
-        if (!s) { el.style.opacity = '0'; continue; }
-        el.style.opacity = '1';
-        // Keep a projected label inside the stage. On a narrow phone the
-        // rightmost tier projects close enough to the edge that a centred
-        // label hangs off it.
-        const half = el.offsetWidth / 2;
-        const x = Math.min(Math.max(half + 4, s[0]), W - half - 4);
-        el.style.transform = `translate(${x}px, ${s[1]}px) translateX(-50%)`;
-        el.classList.toggle('is-hit', tierPods(ti).some((x) => x.dead));
-      }
     }
 
     function loop(now: number) {
@@ -526,93 +494,74 @@
     function start() { if (!live && !reduced.matches) { live = true; last = performance.now(); raf = requestAnimationFrame(loop); } }
     function stop() { if (live) { live = false; cancelAnimationFrame(raf); } }
 
-    // ---- incident flow ----
+    // ---- incident flow, driven by the page ----
+    //
+    // The component owns the simulation; the page owns the narrative. Acts
+    // dispatch cluster:inject / cluster:ablate / cluster:reset as they scroll
+    // into view, and the component reports back with cluster:phase so the
+    // copy can react. Neither side reaches into the other.
 
-    function setPhase(p: Phase, label?: string) { phase = p; elPhase.textContent = label ?? p; elPhase.dataset.p = p; }
+    function setPhase(p: Phase, label?: string) {
+      phase = p;
+      elPhase.textContent = label ?? p;
+      elPhase.dataset.p = p;
+      document.body.dataset.incident = p === 'healthy' ? '' : p;
+      document.dispatchEvent(new CustomEvent('cluster:phase', { detail: { phase: p, fault } }));
+    }
 
     function inject(kind: keyof typeof FAULTS) {
-      if (fault) return;
+      if (fault || !FAULTS[kind]) return;
       fault = kind;
       const f = FAULTS[kind];
-      tierPods(f.target)[0].dead = true;
+      const victims = tierPods(f.target);
+      if (victims.length) victims[0].dead = true;
       setPhase('failing', f.label);
-      root.querySelectorAll<HTMLButtonElement>('[data-fault]').forEach((b) => (b.disabled = true));
-      elReset.hidden = false;
-      elEvTitle.textContent = 'evidence';
-      elEv.innerHTML = '<li class="cx__idle">agent investigating…</li>';
-      elEvCount.textContent = '…';
       paint();
       setTimeout(() => {
         setPhase('investigating'); sweep = 0; paint();
-        // On a timer, not the render loop, so an incident still resolves if the
-        // canvas is paused while it is in flight.
-        setTimeout(() => { sweep = -1; diagnose(); }, reduced.matches ? 0 : 2800);
-      }, 700);
+        setTimeout(() => { sweep = -1; diagnose(); }, reduced.matches ? 0 : 2400);
+      }, 650);
     }
 
     function diagnose() {
       if (!fault || phase === 'diagnosed' || phase === 'ablated') return;
-      const f = FAULTS[fault];
       setPhase('diagnosed');
-      elEv.innerHTML = f.evidence.map(([k, t]) => `<li class="cx__evi"><span>${k}</span>${t}</li>`).join('');
-      elEvCount.textContent = `${f.evidence.length} collected`;
-      elRcaWrap.hidden = false;
-      elRca.textContent = f.rca;
-      elConf.textContent = f.conf.toFixed(2);
-      elAblate.hidden = false;
       paint();
     }
 
-    elAblate.addEventListener('click', () => {
-      if (!fault) return;
-      const f = FAULTS[fault];
-      setPhase('ablated');
-      elEvTitle.textContent = 'evidence — withheld';
-      elEv.innerHTML = f.evidence.map(([k, t]) => `<li class="cx__evi is-gone"><span>${k}</span>${t}</li>`).join('');
-      elEvCount.textContent = '0 of ' + f.evidence.length;
-      elRca.textContent = f.rca;
-      elConf.textContent = (f.conf - 0.02).toFixed(2);
-      elAblate.hidden = true;
-      elVerdict.className = 'cx__verdict is-shown';
-      elVerdict.innerHTML =
-        '<b>Same answer. Same confidence. No evidence.</b> You caused this incident, so you know what the truth was — ' +
-        'and you just watched the conclusion survive the removal of everything that justified it. ' +
-        '<span>That is the Confident Liar effect. ECS &#8776; 0.</span>';
-    });
-
-    elReset.addEventListener('click', () => {
+    function reset() {
       fault = null; sweep = -1;
       pods.forEach((p) => (p.dead = false));
       parts = []; errAcc = 0; okAcc = 0;
       setPhase('healthy'); paint();
-      root.querySelectorAll<HTMLButtonElement>('[data-fault]').forEach((b) => (b.disabled = false));
-      elReset.hidden = true; elRcaWrap.hidden = true; elAblate.hidden = true;
-      elVerdict.className = 'cx__verdict'; elVerdict.textContent = '';
-      elEvTitle.textContent = 'evidence'; elEvCount.textContent = '—';
-      elEv.innerHTML = '<li class="cx__idle">waiting for an incident</li>';
-    });
+    }
 
-    root.querySelectorAll<HTMLButtonElement>('[data-fault]').forEach((b) =>
-      b.addEventListener('click', () => inject(b.dataset.fault as keyof typeof FAULTS)));
+    document.addEventListener('cluster:inject', (e) => inject(((e as CustomEvent).detail?.fault ?? 'oom')));
+    document.addEventListener('cluster:ablate', () => { if (fault) { setPhase('ablated'); paint(); } });
+    document.addEventListener('cluster:reset', () => reset());
 
     // ---- lifecycle ----
 
+    // The camera path spans the narrative acts — roughly the first six
+    // viewports — after which the stage recedes so the work below reads clean.
     function onScroll() {
-      const r = root.getBoundingClientRect();
-      const span = innerHeight + r.height;
-      scrollP = Math.max(0, Math.min(1, (innerHeight - r.top) / span));
+      const span = innerHeight * 6;
+      scrollP = Math.max(0, Math.min(1, scrollY / span));
+      const fade = Math.max(0, Math.min(1, (scrollY - span * 0.92) / (innerHeight * 0.8)));
+      root.style.opacity = String(1 - fade * 0.88);
+      if (tele) tele.style.opacity = String(1 - fade * 0.7);
     }
 
     layout(); onScroll(); draw(performance.now());
 
 
 
-    const stage = root.querySelector<HTMLElement>('.cx__stage')!;
-    new ResizeObserver(() => { layout(); paint(); }).observe(stage);
-    new IntersectionObserver((e) => (e[0].isIntersecting ? start() : stop()), { threshold: 0.02 }).observe(stage);
+    // The stage is the fixed full-bleed element itself now.
+    new ResizeObserver(() => { layout(); paint(); }).observe(root);
+    new IntersectionObserver((e) => (e[0].isIntersecting ? start() : stop()), { threshold: 0.01 }).observe(root);
     addEventListener('scroll', onScroll, { passive: true });
     addEventListener('pointermove', (e) => {
-      const r = stage.getBoundingClientRect();
+      const r = root.getBoundingClientRect();
       tgtX = Math.max(-1, Math.min(1, (e.clientX - r.left - r.width / 2) / (r.width / 2)));
       tgtY = Math.max(-1, Math.min(1, (e.clientY - r.top - r.height / 2) / (r.height / 2)));
     }, { passive: true });
@@ -622,100 +571,42 @@
 </script>
 
 <style>
-  .cx {
-    display: grid; gap: 0;
-    border: 1px solid var(--line); border-radius: var(--r);
-    background: var(--surface); overflow: hidden;
-  }
-  @media (min-width: 60rem) { .cx { grid-template-columns: 1.55fr 1fr; } }
+  .stagefix { opacity: 1; transition: opacity .5s linear; }
+  .cx__canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
 
-  .cx__stage { position: relative; min-height: 320px; }
-  @media (min-width: 60rem) { .cx__stage { min-height: 460px; } }
-  .cx__canvas { display: block; width: 100%; height: 100%; position: absolute; inset: 0; }
-
-  .cx__labels { position: absolute; inset: 0; pointer-events: none; }
+  /* Tier labels ride the projected 3D positions. */
+  .cx__labels { position: absolute; inset: 0; transition: opacity .4s linear; }
   .cx__lab {
     position: absolute; top: 0; left: 0;
-    font-family: var(--mono); font-size: .625rem; letter-spacing: .08em;
-    color: var(--text-faint); white-space: nowrap;
-    transition: color .3s, opacity .3s; will-change: transform;
+    font-family: var(--mono); font-size: .625rem; letter-spacing: .14em;
+    text-transform: uppercase; color: #565e65; white-space: nowrap;
+    transition: color .4s; will-change: transform;
   }
-  .cx__lab.is-hit { color: #e05c5c; }
-  /* Four projected labels cannot sit side by side on a phone — they land on
-     top of each other. The panel underneath names every tier anyway. */
-  @media (max-width: 30rem) { .cx__labels { display: none; } }
+  .cx__lab.is-hit { color: var(--fail); }
+  @media (max-width: 40rem) { .cx__labels { display: none; } }
 
-  .cx__fallback { margin: 0; padding: 1.25rem; color: var(--text-dim); font-size: .875rem; }
-
-  .cx__hud {
-    position: absolute; top: .75rem; left: .875rem; display: flex; gap: .875rem;
-    font-family: var(--mono); font-size: .6875rem; color: var(--text-faint); pointer-events: none;
+  .cx__fallback {
+    position: relative; z-index: 2;
+    margin: 0; padding: 1.25rem 0; color: var(--text-dim); font-size: .9375rem;
   }
-  .cx__stat b { color: var(--text); font-weight: 500; }
-  .cx__stat--phase {
-    text-transform: uppercase; letter-spacing: .12em;
-    padding: .05rem .4rem; border-radius: 3px; border: 1px solid var(--line-bright);
-  }
-  .cx__stat--phase[data-p='healthy'] { color: var(--act); border-color: color-mix(in srgb, var(--act) 40%, transparent); }
-  .cx__stat--phase[data-p='failing'] { color: #e05c5c; border-color: #5c2a2a; }
-  .cx__stat--phase[data-p='investigating'],
-  .cx__stat--phase[data-p='diagnosed'],
-  .cx__stat--phase[data-p='ablated'] { color: var(--evaluate); border-color: #453a6b; }
 
-  .cx__side { border-top: 1px solid var(--line); padding: 1.125rem 1.25rem 1.375rem; }
-  @media (min-width: 60rem) { .cx__side { border-top: 0; border-left: 1px solid var(--line); } }
-
-  .cx__h {
-    display: block; margin-bottom: .625rem;
-    font-family: var(--mono); font-size: .6875rem; letter-spacing: .1em;
-    text-transform: uppercase; color: var(--text-faint);
+  /* Telemetry is always on screen: the cluster is always running. */
+  .tele {
+    position: fixed; z-index: 5; left: 16px; bottom: 14px;
+    display: flex; gap: 1rem; align-items: center;
+    font-family: var(--mono); font-size: .6875rem; color: var(--text-faint);
+    pointer-events: none; transition: opacity .5s linear;
   }
-  .cx__h--row { display: flex; justify-content: space-between; }
-  .cx__cnt { color: var(--text-dim); letter-spacing: 0; }
-
-  .cx__btns { display: flex; flex-wrap: wrap; gap: .5rem; }
-  .cx__b {
-    font: inherit; font-family: var(--mono); font-size: .75rem;
-    padding: .375rem .625rem; border-radius: 4px; cursor: pointer;
-    background: var(--surface-2); color: var(--text-dim);
-    border: 1px solid var(--line-bright);
-    transition: color .15s, border-color .15s;
+  @media (min-width: 40rem) { .tele { left: 32px; bottom: 20px; } }
+  .tele b { color: var(--text-dim); font-weight: 500; }
+  .tele__p {
+    text-transform: uppercase; letter-spacing: .18em;
+    padding: .1rem .45rem; border: 1px solid var(--line-bright); border-radius: 3px;
+    transition: color .4s, border-color .4s;
   }
-  .cx__b:hover:not(:disabled) { color: #e88b8b; border-color: #7a3030; }
-  .cx__b:disabled { opacity: .3; cursor: default; }
-  .cx__b--key {
-    margin-top: .875rem; width: 100%; text-align: left;
-    color: var(--evaluate); border-color: #453a6b; background: #100e1c;
-  }
-  .cx__b--key:hover:not(:disabled) { color: #c4b8ff; border-color: var(--evaluate); }
-
-  .cx__panel { margin-top: 1.25rem; }
-  .cx__ev { list-style: none; margin: 0; padding: 0; font-family: var(--mono); font-size: .6875rem; min-height: 5.5rem; }
-  .cx__idle { color: var(--text-faint); font-style: italic; }
-  :global(.cx__evi) {
-    display: flex; gap: .5rem; padding: .25rem 0; color: var(--text-dim);
-    border-bottom: 1px dashed rgba(255,255,255,.05);
-  }
-  :global(.cx__evi span) { flex: none; width: 3rem; color: var(--text-faint); text-transform: uppercase; font-size: .625rem; padding-top: .1rem; }
-  :global(.cx__evi.is-gone) { opacity: .26; text-decoration: line-through; text-decoration-color: #7a3030; }
-
-  .cx__rca { margin: 0 0 .75rem; font-size: .875rem; line-height: 1.5; color: var(--text); }
-  .cx__conf { display: flex; justify-content: space-between; font-family: var(--mono); font-size: .6875rem; color: var(--text-faint); }
-  .cx__conf span:last-child { color: var(--text); }
-
-  .cx__verdict { display: none; }
-  .cx__verdict.is-shown {
-    display: block; margin-top: 1rem; padding: .75rem .875rem;
-    background: #16090b; border-left: 2px solid #7a3030; border-radius: 0 4px 4px 0;
-    font-size: .8125rem; line-height: 1.55; color: var(--text-dim);
-  }
-  :global(.cx__verdict) b { color: #e88b8b; }
-  :global(.cx__verdict) span { display: block; margin-top: .5rem; font-family: var(--mono); font-size: .6875rem; color: var(--text-faint); }
-
-  .cx__reset {
-    margin-top: 1rem; font: inherit; font-family: var(--mono); font-size: .6875rem;
-    background: none; border: 0; padding: 0; cursor: pointer;
-    color: var(--text-faint); text-decoration: underline; text-underline-offset: 3px;
-  }
-  .cx__reset:hover { color: var(--text); }
+  .tele__p[data-p='healthy'] { color: var(--act); border-color: #204a55; }
+  .tele__p[data-p='failing'] { color: var(--fail); border-color: #5c2424; }
+  .tele__p[data-p='investigating'],
+  .tele__p[data-p='diagnosed'],
+  .tele__p[data-p='ablated'] { color: var(--evaluate); border-color: #453a6b; }
 </style>
