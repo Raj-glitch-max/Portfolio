@@ -506,7 +506,12 @@
         const el = labs[ti];
         if (!s) { el.style.opacity = '0'; continue; }
         el.style.opacity = '1';
-        el.style.transform = `translate(${s[0]}px, ${s[1]}px) translateX(-50%)`;
+        // Keep a projected label inside the stage. On a narrow phone the
+        // rightmost tier projects close enough to the edge that a centred
+        // label hangs off it.
+        const half = el.offsetWidth / 2;
+        const x = Math.min(Math.max(half + 4, s[0]), W - half - 4);
+        el.style.transform = `translate(${x}px, ${s[1]}px) translateX(-50%)`;
         el.classList.toggle('is-hit', tierPods(ti).some((x) => x.dead));
       }
     }
@@ -636,6 +641,9 @@
     transition: color .3s, opacity .3s; will-change: transform;
   }
   .cx__lab.is-hit { color: #e05c5c; }
+  /* Four projected labels cannot sit side by side on a phone — they land on
+     top of each other. The panel underneath names every tier anyway. */
+  @media (max-width: 30rem) { .cx__labels { display: none; } }
 
   .cx__fallback { margin: 0; padding: 1.25rem; color: var(--text-dim); font-size: .875rem; }
 

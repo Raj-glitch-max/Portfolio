@@ -1,4 +1,52 @@
 /* ---------------------------------------------------------------
+   Type. Two self-hosted variable faces, subset to the ranges this
+   site actually uses (ASCII, Latin-1 for the é in "résumé", the
+   punctuation and the few symbols), then metric-matched to an
+   Arial-metric fallback so the swap does not reflow the page.
+
+   Space Grotesk carries the display voice; Instrument Sans reads
+   better at text sizes; the mono stack is local and costs nothing.
+   45KB for both, preloaded.
+   --------------------------------------------------------------- */
+
+@font-face {
+  font-family: 'Space Grotesk';
+  src: url('/fonts/space-grotesk.woff2') format('woff2');
+  font-weight: 400 700;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Instrument Sans';
+  src: url('/fonts/instrument-sans.woff2') format('woff2');
+  font-weight: 400 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Metric overrides solved empirically against the strings this site actually
+   sets, not an a-z average — the a-z figure put the display face 8.4% out on
+   the real headline. At these values every heading that can wrap (and so shift
+   layout) matches within 2-4.4%. The short project names — AISRE, KLRB — are
+   further out, but they are 120px single-line titles that reflow nothing. */
+@font-face {
+  font-family: 'Display fallback';
+  src: local('Arial'), local('Helvetica Neue'), local('Liberation Sans');
+  ascent-override: 98.4%;
+  descent-override: 29.2%;
+  line-gap-override: 0%;
+  size-adjust: 106.8%;
+}
+@font-face {
+  font-family: 'Text fallback';
+  src: local('Arial'), local('Helvetica Neue'), local('Liberation Sans');
+  ascent-override: 97.0%;
+  descent-override: 25.0%;
+  line-gap-override: 0%;
+  size-adjust: 102.0%;
+}
+
+/* ---------------------------------------------------------------
    rajpatil.dev — design tokens
    Dark by intent (this is a console for a control plane), with a
    clean print stylesheet because recruiters do print pages.
@@ -24,7 +72,8 @@
   --attribute: #4fc98a;
 
   --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
-  --sans: system-ui, -apple-system, "Segoe UI", Roboto, Inter, "Helvetica Neue", sans-serif;
+  --sans: "Instrument Sans", "Text fallback", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --display: "Space Grotesk", "Display fallback", "Instrument Sans", system-ui, sans-serif;
 
   --max: 76rem;
   --prose: 40rem;
@@ -73,12 +122,13 @@ body::before {
 
 h1, h2, h3, h4 {
   margin: 0;
-  font-weight: 560;
-  letter-spacing: -0.021em;
-  line-height: 1.15;
+  font-family: var(--display);
+  font-weight: 600;
+  letter-spacing: -0.028em;
+  line-height: 1.1;
   text-wrap: balance;
 }
-h1 { font-size: clamp(2.1rem, 6vw, 3.4rem); }
+h1 { font-size: clamp(2.2rem, 6.2vw, 3.5rem); letter-spacing: -0.034em; }
 h2 { font-size: clamp(1.3rem, 3vw, 1.6rem); }
 h3 { font-size: 1.0625rem; }
 
@@ -178,7 +228,7 @@ section { padding-block: clamp(3rem, 8vw, 5.5rem); }
 }
 .card:hover { border-color: color-mix(in srgb, var(--c, var(--line-bright)) 50%, transparent); background: var(--surface-2); }
 .card__top { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; margin-bottom: .5rem; }
-.card__name { font-size: 1.0625rem; font-weight: 600; letter-spacing: -.015em; }
+.card__name { font-family: var(--display); font-size: 1.0625rem; font-weight: 600; letter-spacing: -.022em; }
 .card__line { color: var(--text-dim); font-size: .9375rem; margin: 0; }
 .card__stack { margin-top: .875rem; font-family: var(--mono); font-size: .6875rem; color: var(--text-faint); }
 

@@ -23,7 +23,7 @@ Enforced in CI by `npm run budget` — the build fails if it regresses.
 | JS (external files) | 50KB | **7.4KB** |
 | CSS (external files) | 30KB | **0KB** (inlined) |
 | any page, gzipped | 60KB | ~9KB max |
-| whole site | 900KB | ~210KB |
+| whole site | 900KB | ~270KB |
 
 That 7.4KB is the whole homepage cluster simulation — service graph, traffic,
 failure propagation, the investigation sweep and the incident state machine.
@@ -54,6 +54,22 @@ npm run budget   # fails on regression
 
 Static output in `dist/`. Cloudflare Pages: build `npm run build`, output
 `site/dist`. `public/_headers` is Pages/Netlify syntax.
+
+## Type
+
+Two self-hosted variable faces: Space Grotesk for display, Instrument Sans for
+text, with the local mono stack for labels. Subset to the ranges this site
+actually sets — ASCII, Latin-1 for the é in "résumé", the punctuation and a few
+symbols — which brings them to 18KB and 27KB. Both are preloaded.
+
+The fallback faces carry metric overrides solved empirically against the real
+headings and paragraphs rather than an a-z average: that average put the
+display face 8.4% out on the actual headline, which is worse than no adjustment
+at all. At the shipped values body text matches its fallback within 0.45% and
+wrapping headings within 4.5%, so the swap does not reflow the page.
+
+Regenerate with `pyftsubset` if the copy ever needs a glyph outside those
+ranges — a missing glyph fails silently as a fallback substitution.
 
 ## The renderer
 
