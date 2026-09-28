@@ -627,3 +627,90 @@ body[data-incident='failing'] .rule { background: #3a1c1c; }
   border-radius: 7px;
 }
 .btn--primary { letter-spacing: -.01em; }
+
+/* ===============================================================
+   INTERACTION
+   =============================================================== */
+
+/* ---- cross-document view transitions ----
+   Navigating between pages morphs instead of flashing white. This is the
+   platform feature, not a router: no JavaScript, no client-side routing,
+   and browsers without it just navigate normally. */
+
+@view-transition { navigation: auto; }
+
+@media (prefers-reduced-motion: no-preference) {
+  ::view-transition-old(root) {
+    animation: vtOut .3s cubic-bezier(.4, 0, 1, 1) both;
+  }
+  ::view-transition-new(root) {
+    animation: vtIn .44s cubic-bezier(0, 0, .2, 1) both;
+  }
+}
+@keyframes vtOut { to { opacity: 0; transform: translateY(-1.1rem) scale(.99); } }
+@keyframes vtIn { from { opacity: 0; transform: translateY(1.5rem) scale(1.006); } }
+
+/* The nav is the same object on every page, so let it stay put across the
+   transition rather than fading out and back in with everything else. */
+.nav { view-transition-name: nav; }
+
+/* ---- cursor ----
+   A trailing ring alongside the real cursor rather than instead of it —
+   hiding the system cursor looks good in a screenshot and costs the visitor
+   a pointer they can find. */
+
+.cur {
+  position: fixed; inset: 0; z-index: 90;
+  pointer-events: none; opacity: 0;
+  transition: opacity .35s ease;
+}
+.cur.is-on { opacity: 1; }
+.cur__dot { display: none; }
+.cur__ring {
+  position: fixed; left: 0; top: 0;
+  width: 26px; height: 26px; border-radius: 50%;
+  border: 1px solid #39424a;
+  transform: translate(var(--x, 0), var(--y, 0)) translate(-50%, -50%);
+  transition: width .32s var(--ease), height .32s var(--ease),
+              border-radius .32s var(--ease), border-color .3s, opacity .3s;
+}
+.cur.is-hot .cur__ring { width: 46px; height: 46px; border-color: var(--text-dim); }
+.cur.is-wide .cur__ring { width: 84px; height: 30px; border-radius: 5px; }
+.cur.is-down .cur__ring { width: 18px; height: 18px; border-color: var(--text); }
+@media (pointer: coarse) { .cur { display: none; } }
+
+/* ---- section rail ---- */
+
+.rail {
+  position: fixed; right: 18px; top: 0; height: 100svh; z-index: 40;
+  display: flex; flex-direction: column; justify-content: center;
+  align-items: flex-end; gap: 9px; pointer-events: none;
+}
+.rail__t {
+  pointer-events: auto; appearance: none;
+  width: 14px; height: 1px; padding: 0; border: 0; cursor: pointer;
+  background: #333b40;
+  transition: width .4s var(--ease), background .4s;
+}
+.rail__t:hover { width: 26px; background: var(--text-dim); }
+.rail__t.is-on { width: 30px; background: var(--text); }
+.rail__fill { display: none; }
+@media (max-width: 52rem) { .rail { display: none; } }
+
+/* ---- tilt ----
+   Rows lean toward the pointer. Three degrees, not thirty. */
+
+.work__in, .plane {
+  transform: perspective(1000px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg));
+  transform-style: preserve-3d;
+  transition: transform .55s var(--ease), padding-left .45s var(--ease);
+}
+.work__name, .plane__name { transform: translateX(var(--mx, 0)); }
+@media (prefers-reduced-motion: reduce) {
+  .work__in, .plane { transform: none; }
+  .work__name, .plane__name { transform: none; }
+}
+
+/* Labels are rewritten character by character as they resolve, so hold their
+   box to stop the line reflowing while it decodes. */
+.kicker { min-height: 1.2em; }
