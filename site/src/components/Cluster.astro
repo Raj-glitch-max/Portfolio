@@ -544,7 +544,14 @@
 
     // The camera path spans the narrative acts — roughly the first six
     // viewports — after which the stage recedes so the work below reads clean.
+    let scrollQueued = false;
     function onScroll() {
+      if (scrollQueued) return;
+      scrollQueued = true;
+      requestAnimationFrame(applyScroll);
+    }
+    function applyScroll() {
+      scrollQueued = false;
       const span = innerHeight * 6;
       scrollP = Math.max(0, Math.min(1, scrollY / span));
       const fade = Math.max(0, Math.min(1, (scrollY - span * 0.92) / (innerHeight * 0.8)));
@@ -552,7 +559,7 @@
       if (tele) tele.style.opacity = String(1 - fade * 0.7);
     }
 
-    layout(); onScroll(); draw(performance.now());
+    layout(); applyScroll(); draw(performance.now());
 
 
 

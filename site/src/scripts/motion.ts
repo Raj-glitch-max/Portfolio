@@ -22,6 +22,12 @@ const raf = requestAnimationFrame;
 function smoothScroll() {
   if (reduced.matches || !fine.matches) return;
 
+  // CSS `scroll-behavior: smooth` stays as the no-JS fallback for anchor jumps,
+  // but it has to be off while this runs: otherwise the browser smooth-animates
+  // toward every per-frame scrollTo below, easing an already-eased value. That
+  // is what made scrolling feel stiff and rubber-banded rather than smooth.
+  document.documentElement.style.scrollBehavior = 'auto';
+
   let target = scrollY;
   let current = scrollY;
   let running = false;
@@ -34,15 +40,20 @@ function smoothScroll() {
 
   const max = () => document.documentElement.scrollHeight - innerHeight;
 
-  function loop() {
+  let last = 0;
+  function loop(now: number) {
     try {
+      const dt = last ? Math.min(0.05, (now - last) / 1000) : 1 / 60;
+      last = now;
       const d = target - current;
-      current += d * 0.115;
-      if (Math.abs(d) < 0.4) { current = target; running = false; }
+      // Exponential approach, so the glide is identical at 60Hz and 144Hz.
+      current += d * (1 - Math.exp(-9 * dt));
+      if (Math.abs(d) < 0.35) { current = target; running = false; last = 0; }
       scrollTo(0, current);
       if (running) raf(loop);
     } catch {
       enabled = false; running = false;
+      document.documentElement.style.scrollBehavior = '';
     }
   }
 
@@ -57,7 +68,7 @@ function smoothScroll() {
     target = Math.max(0, Math.min(max(), target + step));
     clearTimeout(wheeling);
     wheeling = window.setTimeout(() => { wheeling = 0; }, 140);
-    if (!running) { running = true; current = scrollY; raf(loop); }
+    if (!running) { running = true; current = scrollY; last = 0; raf(loop); }
   }, { passive: false });
 
   // Anything that is not the wheel — keys, scrollbar, anchors, find-in-page —
@@ -216,6 +227,24 @@ function rail() {
   update();
 }
 
+/* ------------------------------------------------------------------ *
+ * 0. Start at the beginning
+ *
+ * The page is a sequence, and the cluster's state is tied to where you
+ * are in it. Restoring a reload to the middle of the incident shows an
+ * act whose telemetry never ran, so this page always opens at act one —
+ * unless a link asked for a specific section.
+ * ------------------------------------------------------------------ */
+function startAtTop() {
+  if (!('scrollRestoration' in history)) return;
+  history.scrollRestoration = 'manual';
+  if (location.hash) return;
+  scrollTo(0, 0);
+  // Some browsers restore after load fires, so claim it once more.
+  addEventListener('load', () => { if (!location.hash) scrollTo(0, 0); }, { once: true });
+}
+
+startAtTop();
 smoothScroll();
 cursor();
 decode();
